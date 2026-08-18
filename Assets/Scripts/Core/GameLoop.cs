@@ -402,6 +402,13 @@ namespace LABANAN
 
         private void UpdateUI(GameState state)
         {
+            // Laban splash
+            var labanObj = GameObject.Find("LabanText");
+            if (labanObj != null)
+            {
+                labanObj.SetActive(state.showLaban);
+            }
+
             var timerObj = GameObject.Find("TimerText");
             if (timerObj != null)
             {
@@ -544,9 +551,12 @@ namespace LABANAN
                 GameState state = GameManager.Instance.currentState;
                 var p1 = state.player1;
                 GUI.Label(new Rect(10, y, 900, lineHeight),
-                    $"P1: x={p1.x} y={p1.y} hp={p1.health} stm={p1.stamina} slow={p1.slowTimer} atk={p1.attacking} sung={p1.sungkit} launch={p1.launch} blk={p1.blocking} blkTmr={p1.blockTimer} gnd={p1.isOnGround} anim={p1.animState}[{p1.animIndex}]");
+                    $"P1: hp={p1.health} stm={p1.stamina} slow={p1.slowTimer} blkTmr={p1.blockTimer} gnd={p1.isOnGround} anim={p1.animState}[{p1.animIndex}]");
                 y += lineHeight;
-                GUI.Label(new Rect(10, y, 300, lineHeight), $"Round: {state.round} Timer: {state.timer} showLaban: {state.showLaban}");
+                GUI.Label(new Rect(10, y, 900, lineHeight),
+                    $"    J(sword)={CooldownStr(p1.attackCooldownLeft)} K(sungkit)={CooldownStr(p1.sungkitCooldownLeft)} L(launch)={CooldownStr(p1.launchCooldownLeft)}");
+                y += lineHeight;
+                GUI.Label(new Rect(10, y, 500, lineHeight), $"Round: {state.round}  Timer: {state.timer}  Wins: P1={state.player1Wins} P2={state.player2Wins}  First to {GameManager.Instance.winsNeeded}");
                 y += lineHeight;
                 string debugModes = "";
                 if (debugDummyMode) debugModes += " DUMMY";
@@ -599,6 +609,13 @@ namespace LABANAN
             tex.Apply();
 
             GUI.DrawTexture(new Rect(x, yScreen, w, h), tex);
+        }
+
+        private static string CooldownStr(int framesLeft)
+        {
+            if (framesLeft <= 0) return "READY";
+            float seconds = framesLeft / 60f;
+            return $"{seconds:F1}s";
         }
     }
 }

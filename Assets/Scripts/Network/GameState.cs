@@ -141,6 +141,7 @@ namespace LABANAN
             w.Write(p.launchTimer);
             w.Write(p.actionLockFramesLeft);
             w.Write(p.slowTimer);
+            w.Write(p.staminaRegenTimer);
         }
 
         private static PlayerState ReadPlayerState(System.IO.BinaryReader r)
@@ -177,7 +178,8 @@ namespace LABANAN
                 blockCooldownLeft = r.ReadInt32(),
                 launchTimer = r.ReadInt32(),
                 actionLockFramesLeft = r.ReadInt32(),
-                slowTimer = r.ReadInt32()
+                slowTimer = r.ReadInt32(),
+                staminaRegenTimer = r.ReadInt32()
             };
         }
     }

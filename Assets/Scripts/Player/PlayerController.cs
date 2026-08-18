@@ -30,7 +30,6 @@ namespace LABANAN
         public const int SWORD_STAMINA_COST = 5;
         public const int SUNGKIT_STAMINA_COST = 20;
         public const int LAUNCH_STAMINA_COST = 60;
-        public const int STAMINA_REGEN = 2;
 
         // ── Body ──
         public const int BODY_WIDTH = 640;
@@ -114,8 +113,13 @@ namespace LABANAN
             state.blockCooldownLeft = Max(0, state.blockCooldownLeft - 1);
             state.slowTimer = Max(0, state.slowTimer - 1);
 
-            // Stamina regen
-            state.stamina = Min(state.stamina + STAMINA_REGEN, MAX_STAMINA);
+            // Stamina regen: +1 every second (60 frames)
+            state.staminaRegenTimer++;
+            if (state.staminaRegenTimer >= 60)
+            {
+                state.staminaRegenTimer = 0;
+                state.stamina = Min(state.stamina + 1, MAX_STAMINA);
+            }
 
             if (state.isKnockedBack)
             {

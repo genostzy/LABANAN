@@ -52,6 +52,9 @@ namespace LABANAN
         // Slow debuff (from sungkit hit)
         public int slowTimer;
 
+        // Stamina regen timer (counts frames, regens +1 per second)
+        public int staminaRegenTimer;
+
         public static PlayerState CreateDefault(int spawnX, int spawnY, bool facingLeft)
         {
             return new PlayerState
@@ -87,7 +90,8 @@ namespace LABANAN
                 blockCooldownLeft = 0,
                 launchTimer = 0,
                 actionLockFramesLeft = 0,
-                slowTimer = 0
+                slowTimer = 0,
+                staminaRegenTimer = 0
             };
         }
 

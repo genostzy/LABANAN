@@ -11,8 +11,8 @@ namespace LABANAN
         public static GameManager Instance { get; private set; }
 
         [Header("Game Settings")]
-        public int maxRounds = 4;
-        public int winsNeeded = 2;
+        public int maxRounds = 10;
+        public int winsNeeded = 3;
         public int roundTimerSeconds = 60;
 
         // Current game state
