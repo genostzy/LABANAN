@@ -33,11 +33,13 @@ namespace LABANAN
         private bool debugDummyMode;
         private bool debugAttackSpam;
 
-        // ── UI references ──
+        private static Sprite whiteSprite;
+        private static Font cachedFont;
+
         private GameObject canvasObj;
         private Text timerText;
         private Text roundText;
-        private Text labanText;
+        private Image labanImage;
         private Image p1HealthBar;
         private Image p2HealthBar;
         private Image p1StaminaBar;
@@ -48,7 +50,16 @@ namespace LABANAN
         private Text p2CooldownText;
         private Image[] p1WinDots = new Image[3];
         private Image[] p2WinDots = new Image[3];
-        private static Sprite whiteSprite;
+
+        private Image redWinOverlay;
+        private Image blueWinOverlay;
+        private Image drawOverlay;
+        private Image pauseOverlay;
+        private GameObject labanObj;
+        private Image p1HealthFrame;
+        private Image p2HealthFrame;
+
+        private int prevTimer = 60;
 
         private void Start()
         {
@@ -60,10 +71,6 @@ namespace LABANAN
             SetupUI();
             Debug.Log("GameLoop.Start() complete");
         }
-
-        // ──────────────────────────────────────────────
-        //  SPRITES
-        // ──────────────────────────────────────────────
 
         private void LoadSprites()
         {
@@ -101,10 +108,6 @@ namespace LABANAN
             return row[animIndex];
         }
 
-        // ──────────────────────────────────────────────
-        //  BACKGROUND
-        // ──────────────────────────────────────────────
-
         private void SetupBackground()
         {
             background = new GameObject("Background");
@@ -131,27 +134,30 @@ namespace LABANAN
             background.transform.localScale = Vector3.one;
         }
 
-        // ──────────────────────────────────────────────
-        //  PLATFORMS
-        // ──────────────────────────────────────────────
-
         private void SetupPlatforms()
         {
-            CreateSolidPlatform("PlatformVisuals", new Vector3(9f, 0.25f, 3), new Vector3(12f, 0.5f, 1f), new Color(0.3f, 0.35f, 0.3f));
-            CreateSolidPlatform("LeftPlatformVisual", new Vector3(3f, 3.25f, 3), new Vector3(3f, 0.5f, 1f), new Color(0.35f, 0.3f, 0.3f));
-            CreateSolidPlatform("RightPlatformVisual", new Vector3(15f, 3.25f, 3), new Vector3(3f, 0.5f, 1f), new Color(0.3f, 0.3f, 0.35f));
+            var platTex = Resources.Load<Texture2D>("Sprites/PLATFORM");
+            Sprite platSprite = null;
+            if (platTex != null)
+                platSprite = Sprite.Create(platTex, new Rect(0, 0, platTex.width, platTex.height), new Vector2(0.5f, 0.5f), platTex.width / 12);
+            else
+                platSprite = CreateSquareSprite();
+
+            CreatePlatformVisual("PlatformVisuals", new Vector3(9f, 0.25f, 3), new Vector3(12f, 0.5f, 1f), platSprite, new Color(0.3f, 0.35f, 0.3f));
+            CreatePlatformVisual("LeftPlatformVisual", new Vector3(3f, 3.25f, 3), new Vector3(3f, 0.5f, 1f), platSprite, new Color(0.35f, 0.3f, 0.3f));
+            CreatePlatformVisual("RightPlatformVisual", new Vector3(15f, 3.25f, 3), new Vector3(3f, 0.5f, 1f), platSprite, new Color(0.3f, 0.3f, 0.35f));
 
             HidePlatformObject("MainPlatform");
             HidePlatformObject("LeftPlatform");
             HidePlatformObject("RightPlatform");
         }
 
-        private void CreateSolidPlatform(string name, Vector3 pos, Vector3 scale, Color color)
+        private void CreatePlatformVisual(string name, Vector3 pos, Vector3 scale, Sprite sprite, Color color)
         {
             var obj = new GameObject(name);
             var sr = obj.AddComponent<SpriteRenderer>();
             sr.sortingOrder = 1;
-            sr.sprite = CreateSquareSprite();
+            sr.sprite = sprite;
             sr.color = color;
             obj.transform.position = pos;
             obj.transform.localScale = scale;
@@ -177,10 +183,6 @@ namespace LABANAN
             return Sprite.Create(tex, new Rect(0, 0, 4, 4), new Vector2(0.5f, 0.5f), 4);
         }
 
-        // ──────────────────────────────────────────────
-        //  UI  (created at runtime, direct references)
-        // ──────────────────────────────────────────────
-
         private void SetupUI()
         {
             canvasObj = new GameObject("HUD_Canvas");
@@ -195,7 +197,6 @@ namespace LABANAN
             es.AddComponent<UnityEngine.EventSystems.EventSystem>();
             es.AddComponent<UnityEngine.EventSystems.StandaloneInputModule>();
 
-            // Preload white sprite for all UI images
             if (whiteSprite == null)
             {
                 var tex = new Texture2D(4, 4);
@@ -206,19 +207,37 @@ namespace LABANAN
                 whiteSprite = Sprite.Create(tex, new Rect(0, 0, 4, 4), new Vector2(0.5f, 0.5f), 4);
             }
 
+            Font font = GetFont();
+
             // ── Nametags ──
             p1NameTag = CreateText(canvasObj.transform, "P1Name", "RED", 22, TextAnchor.MiddleCenter,
-                new Vector2(0.02f, 0.97f), new Vector2(0.15f, 1f), Color.red);
+                new Vector2(0.02f, 0.97f), new Vector2(0.15f, 1f), Color.red, font);
             p2NameTag = CreateText(canvasObj.transform, "P2Name", "BLUE", 22, TextAnchor.MiddleCenter,
-                new Vector2(0.85f, 0.97f), new Vector2(0.98f, 1f), new Color(0.3f, 0.6f, 1f));
+                new Vector2(0.85f, 0.97f), new Vector2(0.98f, 1f), new Color(0.3f, 0.6f, 1f), font);
 
-            // ── Health bars ──
+            // ── Health bar backgrounds (HEALTH BAR.png) ──
+            var hbTex = Resources.Load<Texture2D>("Sprites/HEALTH BAR");
+            Sprite hbSprite = null;
+            if (hbTex != null)
+                hbSprite = Sprite.Create(hbTex, new Rect(0, 0, hbTex.width, hbTex.height), new Vector2(0.5f, 0.5f), hbTex.width / 8);
+
+            if (hbSprite != null)
+            {
+                p1HealthFrame = CreateImage(canvasObj.transform, "P1HealthFrame", hbSprite,
+                    new Vector2(0.0f, 0.93f), new Vector2(0.40f, 0.97f));
+                p2HealthFrame = CreateImage(canvasObj.transform, "P2HealthFrame", hbSprite,
+                    new Vector2(0.60f, 0.93f), new Vector2(1.0f, 0.97f));
+                if (p1HealthFrame != null) p1HealthFrame.type = Image.Type.Simple;
+                if (p2HealthFrame != null) p2HealthFrame.type = Image.Type.Simple;
+            }
+
+            // ── Health bars (fill) ──
             p1HealthBar = CreateBar(canvasObj.transform, "P1HealthBar", Color.red,
                 new Vector2(0.02f, 0.935f), new Vector2(0.38f, 0.965f));
             p2HealthBar = CreateBar(canvasObj.transform, "P2HealthBar", new Color(0, 0.5f, 1f),
                 new Vector2(0.62f, 0.935f), new Vector2(0.98f, 0.965f));
 
-            // ── Stamina bars (below health) ──
+            // ── Stamina bars ──
             p1StaminaBar = CreateBar(canvasObj.transform, "P1StaminaBar", new Color(0.2f, 0.8f, 0.2f),
                 new Vector2(0.02f, 0.915f), new Vector2(0.22f, 0.932f));
             p2StaminaBar = CreateBar(canvasObj.transform, "P2StaminaBar", new Color(0.2f, 0.8f, 0.2f),
@@ -237,26 +256,116 @@ namespace LABANAN
             }
 
             // ── Center: Timer + Round ──
-            timerText = CreateText(canvasObj.transform, "TimerText", "60", 48, TextAnchor.MiddleCenter,
-                new Vector2(0.45f, 0.94f), new Vector2(0.55f, 0.98f), Color.white);
-            roundText = CreateText(canvasObj.transform, "RoundText", "ROUND 1", 20, TextAnchor.MiddleCenter,
-                new Vector2(0.42f, 0.91f), new Vector2(0.58f, 0.935f), Color.white);
+            timerText = CreateText(canvasObj.transform, "TimerText", "60", 64, TextAnchor.MiddleCenter,
+                new Vector2(0.42f, 0.93f), new Vector2(0.58f, 0.99f), Color.white, font);
+            roundText = CreateText(canvasObj.transform, "RoundText", "ROUND 1", 28, TextAnchor.MiddleCenter,
+                new Vector2(0.38f, 0.90f), new Vector2(0.62f, 0.935f), Color.white, font);
 
             // ── Cooldown indicators ──
             p1CooldownText = CreateText(canvasObj.transform, "P1Cooldown", "J:READY  K:READY  L:READY", 16, TextAnchor.MiddleLeft,
-                new Vector2(0.02f, 0.87f), new Vector2(0.30f, 0.89f), new Color(0.8f, 0.8f, 0.8f));
+                new Vector2(0.02f, 0.87f), new Vector2(0.30f, 0.89f), new Color(0.8f, 0.8f, 0.8f), font);
             p2CooldownText = CreateText(canvasObj.transform, "P2Cooldown", "J:READY  K:READY  L:READY", 16, TextAnchor.MiddleRight,
-                new Vector2(0.70f, 0.87f), new Vector2(0.98f, 0.89f), new Color(0.8f, 0.8f, 0.8f));
+                new Vector2(0.70f, 0.87f), new Vector2(0.98f, 0.89f), new Color(0.8f, 0.8f, 0.8f), font);
 
-            // ── Laban text ──
-            labanText = CreateText(canvasObj.transform, "LabanText", "LABAN!", 120, TextAnchor.MiddleCenter,
-                new Vector2(0.15f, 0.35f), new Vector2(0.85f, 0.65f), Color.yellow);
+            // ── LABAN splash (sprite image) ──
+            labanObj = new GameObject("LabanSplash");
+            labanObj.transform.SetParent(canvasObj.transform, false);
+            var labanRt = labanObj.AddComponent<RectTransform>();
+            labanRt.anchorMin = new Vector2(0.15f, 0.30f);
+            labanRt.anchorMax = new Vector2(0.85f, 0.70f);
+            labanRt.offsetMin = Vector2.zero;
+            labanRt.offsetMax = Vector2.zero;
+            labanImage = labanObj.AddComponent<Image>();
+            labanImage.raycastTarget = false;
 
-            // ── Win overlay texts ──
+            var labanSpriteTex = Resources.Load<Texture2D>("Sprites/LABAN");
+            if (labanSpriteTex != null)
+            {
+                labanImage.sprite = Sprite.Create(labanSpriteTex,
+                    new Rect(0, 0, labanSpriteTex.width, labanSpriteTex.height),
+                    new Vector2(0.5f, 0.5f), labanSpriteTex.width / 8);
+                labanImage.preserveAspect = true;
+            }
+            else
+            {
+                labanImage.sprite = whiteSprite;
+                labanImage.color = Color.yellow;
+            }
+            labanObj.SetActive(true);
+
+            // ── Win overlays (hidden) ──
+            redWinOverlay = CreateOverlaySprite("RedWin", "Sprites/RED_WIN");
+            blueWinOverlay = CreateOverlaySprite("BlueWin", "Sprites/BLUE_WIN");
+            drawOverlay = CreateOverlaySprite("Draw", "Sprites/DRAW");
+
+            // ── Pause overlay (hidden) ──
+            pauseOverlay = CreateOverlaySprite("PauseOverlay", "Sprites/PAUSE");
+
+            // ── Win overlay texts (hidden) ──
             CreateText(canvasObj.transform, "P1WinsText", "", 28, TextAnchor.MiddleLeft,
-                new Vector2(0.02f, 0.85f), new Vector2(0.15f, 0.88f), Color.red);
+                new Vector2(0.02f, 0.85f), new Vector2(0.15f, 0.88f), Color.red, font);
             CreateText(canvasObj.transform, "P2WinsText", "", 28, TextAnchor.MiddleRight,
-                new Vector2(0.85f, 0.85f), new Vector2(0.98f, 0.88f), new Color(0, 0.5f, 1f));
+                new Vector2(0.85f, 0.85f), new Vector2(0.98f, 0.88f), new Color(0, 0.5f, 1f), font);
+        }
+
+        private static Font GetFont()
+        {
+            if (cachedFont != null) return cachedFont;
+
+            cachedFont = Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf");
+            if (cachedFont != null) return cachedFont;
+
+            cachedFont = Resources.GetBuiltinResource<Font>("Arial.ttf");
+            if (cachedFont != null) return cachedFont;
+
+            cachedFont = Font.CreateDynamicFontFromOSFont("Arial", 32);
+            if (cachedFont != null) return cachedFont;
+
+            cachedFont = Font.CreateDynamicFontFromOSFont("Segoe UI", 32);
+            return cachedFont;
+        }
+
+        private Image CreateOverlaySprite(string name, string resourcePath)
+        {
+            var obj = new GameObject(name);
+            obj.transform.SetParent(canvasObj.transform, false);
+            var rt = obj.AddComponent<RectTransform>();
+            rt.anchorMin = Vector2.zero;
+            rt.anchorMax = Vector2.one;
+            rt.offsetMin = Vector2.zero;
+            rt.offsetMax = Vector2.zero;
+            var img = obj.AddComponent<Image>();
+            img.raycastTarget = false;
+
+            var tex = Resources.Load<Texture2D>(resourcePath);
+            if (tex != null)
+            {
+                img.sprite = Sprite.Create(tex, new Rect(0, 0, tex.width, tex.height),
+                    new Vector2(0.5f, 0.5f), tex.width / 19);
+                img.preserveAspect = false;
+            }
+            else
+            {
+                img.sprite = whiteSprite;
+                img.color = new Color(0, 0, 0, 0.7f);
+            }
+            obj.SetActive(false);
+            return img;
+        }
+
+        private Image CreateImage(Transform parent, string name, Sprite sprite, Vector2 anchorMin, Vector2 anchorMax)
+        {
+            var obj = new GameObject(name);
+            obj.transform.SetParent(parent, false);
+            var rt = obj.AddComponent<RectTransform>();
+            rt.anchorMin = anchorMin;
+            rt.anchorMax = anchorMax;
+            rt.offsetMin = Vector2.zero;
+            rt.offsetMax = Vector2.zero;
+            var img = obj.AddComponent<Image>();
+            img.sprite = sprite;
+            img.raycastTarget = false;
+            return img;
         }
 
         private static Image CreateBar(Transform parent, string name, Color color, Vector2 anchorMin, Vector2 anchorMax)
@@ -274,11 +383,12 @@ namespace LABANAN
             img.type = Image.Type.Filled;
             img.fillMethod = Image.FillMethod.Horizontal;
             img.fillAmount = 1f;
+            img.raycastTarget = false;
             return img;
         }
 
         private static Text CreateText(Transform parent, string name, string text, int fontSize,
-            TextAnchor alignment, Vector2 anchorMin, Vector2 anchorMax, Color color)
+            TextAnchor alignment, Vector2 anchorMin, Vector2 anchorMax, Color color, Font font = null)
         {
             var obj = new GameObject(name);
             obj.transform.SetParent(parent, false);
@@ -290,12 +400,12 @@ namespace LABANAN
             var t = obj.AddComponent<Text>();
             t.text = text;
             t.fontSize = fontSize;
-            var font = Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf");
-            if (font == null) font = Font.CreateDynamicFontFromOSFont("Arial", fontSize);
-            t.font = font;
+            t.font = font != null ? font : GetFont();
             t.alignment = alignment;
             t.color = color;
             t.raycastTarget = false;
+            t.horizontalOverflow = HorizontalWrapMode.Overflow;
+            t.verticalOverflow = VerticalWrapMode.Overflow;
             return t;
         }
 
@@ -314,6 +424,9 @@ namespace LABANAN
                     GameManager.Instance.StartGame();
                     gameStarted = true;
                     Debug.Log("Game started!");
+
+                    if (AudioManager.Instance != null)
+                        AudioManager.Instance.PlayBGM();
                 }
                 return;
             }
@@ -433,8 +546,12 @@ namespace LABANAN
         }
 
         // ──────────────────────────────────────────────
-        //  VISUALS
+        //  VISUALS + AUDIO TRIGGERS
         // ──────────────────────────────────────────────
+
+        private bool prevShowLaban;
+        private bool prevShowRedWin;
+        private bool prevShowBlueWin;
 
         private void UpdateVisuals()
         {
@@ -494,32 +611,49 @@ namespace LABANAN
                 mainCam.orthographicSize = orthoSize;
             }
 
+            // ── Audio triggers ──
+            PlayCombatAudio(state);
+
             UpdateUI(state);
+
+            prevShowLaban = state.showLaban;
+            prevShowRedWin = state.showRedWin;
+            prevShowBlueWin = state.showBlueWin;
         }
 
-        // ──────────────────────────────────────────────
-        //  UI UPDATE (direct references, no Find)
-        // ──────────────────────────────────────────────
+        private void PlayCombatAudio(GameState state)
+        {
+            if (AudioManager.Instance == null) return;
+
+            if (state.showLaban && !prevShowLaban)
+                AudioManager.Instance.PlayLaban();
+
+            if (state.showRedWin && !prevShowRedWin)
+                AudioManager.Instance.PlayRedWin();
+            if (state.showBlueWin && !prevShowBlueWin)
+                AudioManager.Instance.PlayRedWin();
+
+            if (state.timer <= 10 && state.timer > 0)
+                AudioManager.Instance.PlayTimerTick(state.timer);
+
+            bool p1Hurt = state.player1.health < 100 && state.player1.health > 0;
+            bool p2Hurt = state.player2.health < 100 && state.player2.health > 0;
+        }
 
         private void UpdateUI(GameState state)
         {
-            // ── Laban splash ──
-            if (labanText != null)
-                labanText.gameObject.SetActive(state.showLaban);
+            if (labanObj != null)
+                labanObj.SetActive(state.showLaban);
 
-            // ── Timer ──
             if (timerText != null)
                 timerText.text = state.timer.ToString("D2");
 
-            // ── Round ──
             if (roundText != null)
                 roundText.text = $"ROUND {state.round}";
 
-            // ── Health bars ──
             if (p1HealthBar != null) p1HealthBar.fillAmount = (float)state.player1.health / PlayerController.MAX_HEALTH;
             if (p2HealthBar != null) p2HealthBar.fillAmount = (float)state.player2.health / PlayerController.MAX_HEALTH;
 
-            // ── Stamina bars ──
             if (p1StaminaBar != null)
             {
                 p1StaminaBar.fillAmount = (float)state.player1.stamina / PlayerController.MAX_STAMINA;
@@ -531,7 +665,6 @@ namespace LABANAN
                 p2StaminaBar.color = state.player2.slowTimer > 0 ? new Color(0.5f, 0.3f, 1f) : new Color(0.2f, 0.8f, 0.2f);
             }
 
-            // ── Win dots ──
             for (int i = 0; i < 3; i++)
             {
                 if (p1WinDots[i] != null)
@@ -540,11 +673,14 @@ namespace LABANAN
                     p2WinDots[i].color = i < state.player2Wins ? new Color(0.3f, 0.6f, 1f) : new Color(0.3f, 0.3f, 0.3f);
             }
 
-            // ── Cooldown indicators ──
             if (p1CooldownText != null)
                 p1CooldownText.text = $"J:{CdStr(state.player1.attackCooldownLeft)}  K:{CdStr(state.player1.sungkitCooldownLeft)}  L:{CdStr(state.player1.launchCooldownLeft)}";
             if (p2CooldownText != null)
                 p2CooldownText.text = $"J:{CdStr(state.player2.attackCooldownLeft)}  K:{CdStr(state.player2.sungkitCooldownLeft)}  L:{CdStr(state.player2.launchCooldownLeft)}";
+
+            if (redWinOverlay != null) redWinOverlay.gameObject.SetActive(state.showRedWin);
+            if (blueWinOverlay != null) blueWinOverlay.gameObject.SetActive(state.showBlueWin);
+            if (pauseOverlay != null) pauseOverlay.gameObject.SetActive(state.isPaused);
         }
 
         private static string CdStr(int frames)

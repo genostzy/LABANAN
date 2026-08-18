@@ -2,77 +2,82 @@ using UnityEngine;
 
 namespace LABANAN
 {
-    /// <summary>
-    /// Manages all audio playback - music and sound effects.
-    /// Uses classpath resources for portability.
-    /// </summary>
     public class AudioManager : MonoBehaviour
     {
         public static AudioManager Instance { get; private set; }
 
-        [Header("Music")]
-        public AudioClip menuMusic;
-        public AudioClip level1Music;
-        public AudioClip level2Music;
+        private AudioSource musicSource;
+        private AudioSource sfxSource;
 
-        [Header("Sound Effects")]
-        public AudioClip attackSfx;
-        public AudioClip attack2Sfx;
-        public AudioClip blockSfx;
-        public AudioClip hurtSfx;
-        public AudioClip jumpSfx;
+        [Header("Loaded Clips")]
+        public AudioClip bgmClip;
+        public AudioClip level1Clip;
+        public AudioClip level2Clip;
+        public AudioClip attack1Clip;
+        public AudioClip attack2Clip;
+        public AudioClip blockClip;
+        public AudioClip hurtClip;
+        public AudioClip jumpClip;
+        public AudioClip labanClip;
+        public AudioClip tiktikClip;
+        public AudioClip pwestoClip;
+        public AudioClip panaloPulaClip;
+        public AudioClip walangPanaloClip;
 
-        [Header("Sources")]
-        public AudioSource musicSource;
-        public AudioSource sfxSource;
+        private int lastTimerSecond = -1;
 
         private void Awake()
         {
-            if (Instance == null)
-            {
-                Instance = this;
-                DontDestroyOnLoad(gameObject);
-            }
-            else
-            {
-                Destroy(gameObject);
-                return;
-            }
+            if (Instance != null) { Destroy(gameObject); return; }
+            Instance = this;
+            DontDestroyOnLoad(gameObject);
 
-            // Create audio sources if not assigned
-            if (musicSource == null)
-            {
-                musicSource = gameObject.AddComponent<AudioSource>();
-                musicSource.loop = true;
-            }
+            musicSource = gameObject.AddComponent<AudioSource>();
+            musicSource.loop = true;
+            musicSource.volume = 0.4f;
 
-            if (sfxSource == null)
-            {
-                sfxSource = gameObject.AddComponent<AudioSource>();
-            }
+            sfxSource = gameObject.AddComponent<AudioSource>();
+            sfxSource.volume = 0.7f;
+
+            LoadAll();
         }
 
-        public void PlayMenuMusic()
+        private void LoadAll()
         {
-            PlayMusic(menuMusic);
+            bgmClip = Resources.Load<AudioClip>("Audio/bgc");
+            level1Clip = Resources.Load<AudioClip>("Audio/level1");
+            level2Clip = Resources.Load<AudioClip>("Audio/level2");
+            attack1Clip = Resources.Load<AudioClip>("Audio/attack1");
+            attack2Clip = Resources.Load<AudioClip>("Audio/attack2");
+            blockClip = Resources.Load<AudioClip>("Audio/block");
+            hurtClip = Resources.Load<AudioClip>("Audio/hurt");
+            jumpClip = Resources.Load<AudioClip>("Audio/jump");
+            labanClip = Resources.Load<AudioClip>("Audio/laban");
+            tiktikClip = Resources.Load<AudioClip>("Audio/tiktik");
+            pwestoClip = Resources.Load<AudioClip>("Audio/pwesto");
+            panaloPulaClip = Resources.Load<AudioClip>("Audio/panalo pula");
+            walangPanaloClip = Resources.Load<AudioClip>("Audio/walangPanalo");
+        }
+
+        public void PlayBGM()
+        {
+            PlayMusic(bgmClip);
         }
 
         public void PlayLevel1()
         {
-            PlayMusic(level1Music);
+            PlayMusic(level1Clip);
         }
 
         public void PlayLevel2()
         {
-            PlayMusic(level2Music);
+            PlayMusic(level2Clip);
         }
 
-        private void PlayMusic(AudioClip clip)
+        public void PlayMusic(AudioClip clip)
         {
-            if (clip == null || musicSource == null) return;
-
+            if (clip == null) return;
             if (musicSource.clip == clip && musicSource.isPlaying) return;
-
             musicSource.clip = clip;
             musicSource.Play();
         }
@@ -80,32 +85,40 @@ namespace LABANAN
         public void PlaySFX(AudioClip clip)
         {
             if (clip != null && sfxSource != null)
-            {
                 sfxSource.PlayOneShot(clip);
+        }
+
+        public void PlayAttack1() => PlaySFX(attack1Clip);
+        public void PlayAttack2() => PlaySFX(attack2Clip);
+        public void PlayBlock() => PlaySFX(blockClip);
+        public void PlayHurt() => PlaySFX(hurtClip);
+        public void PlayJump() => PlaySFX(jumpClip);
+        public void PlayLaban() => PlaySFX(labanClip);
+        public void PlayRedWin() => PlaySFX(panaloPulaClip);
+        public void PlayDraw() => PlaySFX(walangPanaloClip);
+
+        public void PlayTimerTick(int currentSecond)
+        {
+            if (currentSecond != lastTimerSecond)
+            {
+                lastTimerSecond = currentSecond;
+                PlaySFX(tiktikClip);
             }
-        }
-
-        public void PlayAttackSFX() => PlaySFX(attackSfx);
-        public void PlayBlockSFX() => PlaySFX(blockSfx);
-        public void PlayHurtSFX() => PlaySFX(hurtSfx);
-        public void PlayJumpSFX() => PlaySFX(jumpSfx);
-
-        public void PauseMusic()
-        {
-            if (musicSource != null && musicSource.isPlaying)
-                musicSource.Pause();
-        }
-
-        public void ResumeMusic()
-        {
-            if (musicSource != null && !musicSource.isPlaying)
-                musicSource.UnPause();
         }
 
         public void StopMusic()
         {
-            if (musicSource != null)
-                musicSource.Stop();
+            if (musicSource != null) musicSource.Stop();
+        }
+
+        public void PauseMusic()
+        {
+            if (musicSource != null && musicSource.isPlaying) musicSource.Pause();
+        }
+
+        public void ResumeMusic()
+        {
+            if (musicSource != null && !musicSource.isPlaying) musicSource.UnPause();
         }
     }
 }

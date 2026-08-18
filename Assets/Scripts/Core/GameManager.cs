@@ -49,9 +49,10 @@ namespace LABANAN
             gameRunning = true;
 
             if (NetworkManager.Instance != null)
-            {
                 NetworkManager.Instance.SetGameManager(this);
-            }
+
+            if (AudioManager.Instance != null)
+                AudioManager.Instance.PlayBGM();
         }
 
         public void Tick(InputData p1Input, InputData p2Input)
@@ -144,6 +145,15 @@ namespace LABANAN
 
                 Debug.Log($"[COMBAT] P1 hit P2 for {p1Hit.damage} (type={p1Hit.attackType})");
 
+                if (AudioManager.Instance != null)
+                {
+                    if (p1Hit.isSungkit || p1Hit.attackType == 2)
+                        AudioManager.Instance.PlayAttack2();
+                    else
+                        AudioManager.Instance.PlayAttack1();
+                    AudioManager.Instance.PlayHurt();
+                }
+
                 if (p1Hit.isSungkit)
                 {
                     currentState.player2.slowTimer = PlayerController.SUNGKIT_SLOW_DURATION;
@@ -169,6 +179,7 @@ namespace LABANAN
                     int heal = currentState.player2.health + PlayerController.PARRY_HEAL;
                     currentState.player2.health = Min(heal, PlayerController.MAX_HEALTH);
                     Debug.Log($"[PARRY] P2 perfect parry! Healed {PlayerController.PARRY_HEAL} HP");
+                    if (AudioManager.Instance != null) AudioManager.Instance.PlayBlock();
                 }
             }
 
@@ -182,6 +193,15 @@ namespace LABANAN
                 if (currentState.player1.health < 0) currentState.player1.health = 0;
 
                 Debug.Log($"[COMBAT] P2 hit P1 for {p2Hit.damage} (type={p2Hit.attackType})");
+
+                if (AudioManager.Instance != null)
+                {
+                    if (p2Hit.isSungkit || p2Hit.attackType == 2)
+                        AudioManager.Instance.PlayAttack2();
+                    else
+                        AudioManager.Instance.PlayAttack1();
+                    AudioManager.Instance.PlayHurt();
+                }
 
                 if (p2Hit.isSungkit)
                 {
@@ -208,6 +228,7 @@ namespace LABANAN
                     int heal = currentState.player1.health + PlayerController.PARRY_HEAL;
                     currentState.player1.health = Min(heal, PlayerController.MAX_HEALTH);
                     Debug.Log($"[PARRY] P1 perfect parry! Healed {PlayerController.PARRY_HEAL} HP");
+                    if (AudioManager.Instance != null) AudioManager.Instance.PlayBlock();
                 }
             }
         }
@@ -235,6 +256,7 @@ namespace LABANAN
             if (p1Dead && p2Dead)
             {
                 ResetRound();
+                if (AudioManager.Instance != null) AudioManager.Instance.PlayDraw();
             }
             else if (p1Dead)
             {
@@ -294,9 +316,11 @@ namespace LABANAN
             currentState.showLaban = false;
             currentState.labanTimerFrames = 0;
 
-            if (currentState.round == 3 && AudioManager.Instance != null)
+            if (AudioManager.Instance != null)
             {
-                AudioManager.Instance.PlayLevel2();
+                AudioManager.Instance.PlayLaban();
+                if (currentState.round >= 3)
+                    AudioManager.Instance.PlayLevel2();
             }
         }
 

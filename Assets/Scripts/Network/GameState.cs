@@ -125,6 +125,7 @@ namespace LABANAN
             w.Write(p.blocking);
             w.Write(p.jumping);
             w.Write(p.crouching);
+            w.Write(p.falling);
             w.Write(p.animState);
             w.Write(p.animTick);
             w.Write(p.animIndex);
@@ -163,6 +164,7 @@ namespace LABANAN
                 blocking = r.ReadBoolean(),
                 jumping = r.ReadBoolean(),
                 crouching = r.ReadBoolean(),
+                falling = r.ReadBoolean(),
                 animState = r.ReadInt32(),
                 animTick = r.ReadInt32(),
                 animIndex = r.ReadInt32(),
