@@ -28,8 +28,8 @@ namespace LABANAN
 
         // Frame timing
         private const int FRAMES_PER_SECOND = 60;
-        private const int LABAN_DURATION = 120; // 2 seconds
-        private const int WIN_DISPLAY_DURATION = 72; // 1.2 seconds
+        private const int LABAN_DURATION = 120;
+        private const int WIN_DISPLAY_DURATION = 72;
 
         private void Awake()
         {
@@ -48,27 +48,21 @@ namespace LABANAN
             currentState = GameState.CreateDefault();
             gameRunning = true;
 
-            // Register with network manager
             if (NetworkManager.Instance != null)
             {
                 NetworkManager.Instance.SetGameManager(this);
             }
         }
 
-        /// <summary>
-        /// Main game loop tick. Called at fixed 60fps.
-        /// </summary>
         public void Tick(InputData p1Input, InputData p2Input)
         {
             if (!gameRunning) return;
 
-            // Save state for rollback
             if (NetworkManager.Instance != null)
             {
                 NetworkManager.Instance.SaveGameState(currentState.frame, currentState);
             }
 
-            // Handle LABAN splash screen
             if (currentState.showLaban)
             {
                 currentState.labanTimerFrames--;
@@ -80,14 +74,12 @@ namespace LABANAN
                 return;
             }
 
-            // Handle pause
             if (currentState.isPaused)
             {
                 currentState.frame++;
                 return;
             }
 
-            // Handle win display
             if (currentState.showBlueWin || currentState.showRedWin)
             {
                 currentState.winDisplayTimerFrames--;
@@ -100,27 +92,20 @@ namespace LABANAN
                 return;
             }
 
-            // Handle game over
             if (currentState.isGameOver)
             {
                 currentState.frame++;
                 return;
             }
 
-            // Update timer
             UpdateTimer();
 
-            // Update players
             currentState.player1 = PlayerController.Update(currentState.player1, p1Input, platforms);
             currentState.player2 = PlayerController.Update(currentState.player2, p2Input, platforms);
 
-            // Check attack collisions
             CheckCombat();
 
-            // Check death zone
             CheckDeathZone();
-
-            // Check round end
             CheckRoundEnd();
 
             currentState.frame++;
@@ -136,67 +121,94 @@ namespace LABANAN
 
                 if (currentState.timer <= 0)
                 {
-                    // Time's up - whoever has more HP wins
                     if (currentState.player1.health > currentState.player2.health)
                         DeclareWinner(1);
                     else if (currentState.player2.health > currentState.player1.health)
                         DeclareWinner(2);
                     else
-                        ResetRound(); // Draw
+                        ResetRound();
                 }
             }
         }
 
         private void CheckCombat()
         {
-            // Player 1 attacks Player 2
-            var (p1Damage, p2Damage, p1KB, p2KB) = PlayerController.CheckAttackCollisions(
+            // P1 attacks P2
+            var p1Hit = PlayerController.CheckAttackCollisions(
                 currentState.player1, currentState.player2);
 
-            if (p2Damage > 0)
+            if (p1Hit.damage > 0)
             {
-                currentState.player2.health -= p2Damage;
+                currentState.player2.health -= p1Hit.damage;
                 if (currentState.player2.health < 0) currentState.player2.health = 0;
 
-            if (p2KB)
+                Debug.Log($"[COMBAT] P1 hit P2 for {p1Hit.damage} (type={p1Hit.attackType})");
+
+                if (p1Hit.isSungkit)
+                {
+                    currentState.player2.slowTimer = PlayerController.SUNGKIT_SLOW_DURATION;
+                    Debug.Log($"[DEBUFF] P2 slowed for {PlayerController.SUNGKIT_SLOW_DURATION} frames");
+                }
+            }
+
+            if (p1Hit.knockbackDefender)
             {
                 currentState.player2.isKnockedBack = true;
                 currentState.player2.knockbackDirection = currentState.player1.facingLeft ? -1 : 1;
                 currentState.player2.knockbackTimer = PlayerController.KNOCKBACK_DURATION;
-                Debug.Log($"[COMBAT] P1 hit P2! P2 knockback from x={currentState.player2.x}");
-            }
             }
 
-            if (p1KB)
+            if (p1Hit.knockbackAttacker)
             {
                 currentState.player1.isKnockedBack = true;
                 currentState.player1.knockbackDirection = currentState.player1.facingLeft ? 1 : -1;
-                currentState.player1.knockbackTimer = PlayerController.KNOCKBACK_DURATION;
+                currentState.player1.knockbackTimer = p1Hit.perfectParry ? PlayerController.KNOCKBACK_DURATION : PlayerController.KNOCKBACK_DURATION;
+
+                if (p1Hit.perfectParry)
+                {
+                    int heal = currentState.player2.health + PlayerController.PARRY_HEAL;
+                    currentState.player2.health = Min(heal, PlayerController.MAX_HEALTH);
+                    Debug.Log($"[PARRY] P2 perfect parry! Healed {PlayerController.PARRY_HEAL} HP");
+                }
             }
 
-            // Player 2 attacks Player 1
-            var (p2Damage2, p1Damage2, p2KB2, p1KB2) = PlayerController.CheckAttackCollisions(
+            // P2 attacks P1
+            var p2Hit = PlayerController.CheckAttackCollisions(
                 currentState.player2, currentState.player1);
 
-            if (p1Damage2 > 0)
+            if (p2Hit.damage > 0)
             {
-                currentState.player1.health -= p1Damage2;
+                currentState.player1.health -= p2Hit.damage;
                 if (currentState.player1.health < 0) currentState.player1.health = 0;
 
-            if (p1KB2)
+                Debug.Log($"[COMBAT] P2 hit P1 for {p2Hit.damage} (type={p2Hit.attackType})");
+
+                if (p2Hit.isSungkit)
+                {
+                    currentState.player1.slowTimer = PlayerController.SUNGKIT_SLOW_DURATION;
+                    Debug.Log($"[DEBUFF] P1 slowed for {PlayerController.SUNGKIT_SLOW_DURATION} frames");
+                }
+            }
+
+            if (p2Hit.knockbackDefender)
             {
                 currentState.player1.isKnockedBack = true;
                 currentState.player1.knockbackDirection = currentState.player2.facingLeft ? -1 : 1;
                 currentState.player1.knockbackTimer = PlayerController.KNOCKBACK_DURATION;
-                Debug.Log($"[COMBAT] P2 hit P1! P1 knockback from x={currentState.player1.x}");
-            }
             }
 
-            if (p2KB2)
+            if (p2Hit.knockbackAttacker)
             {
                 currentState.player2.isKnockedBack = true;
                 currentState.player2.knockbackDirection = currentState.player2.facingLeft ? 1 : -1;
                 currentState.player2.knockbackTimer = PlayerController.KNOCKBACK_DURATION;
+
+                if (p2Hit.perfectParry)
+                {
+                    int heal = currentState.player1.health + PlayerController.PARRY_HEAL;
+                    currentState.player1.health = Min(heal, PlayerController.MAX_HEALTH);
+                    Debug.Log($"[PARRY] P1 perfect parry! Healed {PlayerController.PARRY_HEAL} HP");
+                }
             }
         }
 
@@ -222,17 +234,14 @@ namespace LABANAN
 
             if (p1Dead && p2Dead)
             {
-                // Draw - no one wins
                 ResetRound();
             }
             else if (p1Dead)
             {
-                // Player 2 wins
                 DeclareWinner(2);
             }
             else if (p2Dead)
             {
-                // Player 1 wins
                 DeclareWinner(1);
             }
         }
@@ -251,7 +260,6 @@ namespace LABANAN
             }
             currentState.winDisplayTimerFrames = WIN_DISPLAY_DURATION;
 
-            // Check for game over
             if (currentState.player1Wins >= winsNeeded || currentState.player2Wins >= winsNeeded)
             {
                 currentState.isGameOver = true;
@@ -303,9 +311,6 @@ namespace LABANAN
             currentState.player2 = PlayerState.CreateDefault(P2_SPAWN_X, P2_SPAWN_Y, true);
         }
 
-        /// <summary>
-        /// Load a game state for rollback re-simulation.
-        /// </summary>
         public void LoadState(GameState state)
         {
             currentState = state;
@@ -320,6 +325,8 @@ namespace LABANAN
         {
             currentState.isPaused = !currentState.isPaused;
         }
+
+        private static int Min(int a, int b) => a < b ? a : b;
 
         public PlatformManager Platforms => platforms;
     }

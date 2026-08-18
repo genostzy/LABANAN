@@ -179,6 +179,12 @@ namespace LABANAN.Editor
             CreateImage(canvasObj.transform, "P2HealthBar", new Color(0, 0.5f, 1f),
                 new Vector2(0.65f, 0.92f), new Vector2(0.98f, 0.97f));
 
+            // Stamina Bars (below health)
+            CreateImage(canvasObj.transform, "P1StaminaBar", new Color(0.2f, 0.8f, 0.2f),
+                new Vector2(0.02f, 0.88f), new Vector2(0.25f, 0.91f));
+            CreateImage(canvasObj.transform, "P2StaminaBar", new Color(0.2f, 0.8f, 0.2f),
+                new Vector2(0.75f, 0.88f), new Vector2(0.98f, 0.91f));
+
             CreateText(canvasObj.transform, "TimerText", "60", 48, TextAnchor.MiddleCenter,
                 new Vector2(0.45f, 0.92f), new Vector2(0.55f, 0.98f));
             CreateText(canvasObj.transform, "RoundText", "Round 1", 32, TextAnchor.MiddleCenter,

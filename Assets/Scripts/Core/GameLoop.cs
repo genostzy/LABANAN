@@ -430,6 +430,7 @@ namespace LABANAN
                 if (t != null) t.text = $"Wins: {state.player2Wins}";
             }
 
+            // Health bars
             var p1Bar = GameObject.Find("P1HealthBar");
             if (p1Bar != null)
             {
@@ -442,6 +443,29 @@ namespace LABANAN
             {
                 var img = p2Bar.GetComponent<UnityEngine.UI.Image>();
                 if (img != null) img.fillAmount = (float)state.player2.health / PlayerController.MAX_HEALTH;
+            }
+
+            // Stamina bars
+            var p1Stam = GameObject.Find("P1StaminaBar");
+            if (p1Stam != null)
+            {
+                var img = p1Stam.GetComponent<UnityEngine.UI.Image>();
+                if (img != null)
+                {
+                    img.fillAmount = (float)state.player1.stamina / PlayerController.MAX_STAMINA;
+                    img.color = state.player1.slowTimer > 0 ? new Color(0.5f, 0.3f, 1f) : new Color(0.2f, 0.8f, 0.2f);
+                }
+            }
+
+            var p2Stam = GameObject.Find("P2StaminaBar");
+            if (p2Stam != null)
+            {
+                var img = p2Stam.GetComponent<UnityEngine.UI.Image>();
+                if (img != null)
+                {
+                    img.fillAmount = (float)state.player2.stamina / PlayerController.MAX_STAMINA;
+                    img.color = state.player2.slowTimer > 0 ? new Color(0.5f, 0.3f, 1f) : new Color(0.2f, 0.8f, 0.2f);
+                }
             }
         }
 
@@ -519,8 +543,8 @@ namespace LABANAN
             {
                 GameState state = GameManager.Instance.currentState;
                 var p1 = state.player1;
-                GUI.Label(new Rect(10, y, 700, lineHeight),
-                    $"P1: x={p1.x} y={p1.y} spd={p1.speed} hp={p1.health} atk={p1.attacking} atkSU={p1.attackStartupFrames} sung={p1.sungkit} launch={p1.launch} blk={p1.blocking} blkTmr={p1.blockTimer} blkCD={p1.blockCooldownLeft} crouch={p1.crouching} fall={p1.falling} lock={p1.actionLockFramesLeft} gnd={p1.isOnGround} anim={p1.animState}[{p1.animIndex}]");
+                GUI.Label(new Rect(10, y, 900, lineHeight),
+                    $"P1: x={p1.x} y={p1.y} hp={p1.health} stm={p1.stamina} slow={p1.slowTimer} atk={p1.attacking} sung={p1.sungkit} launch={p1.launch} blk={p1.blocking} blkTmr={p1.blockTimer} gnd={p1.isOnGround} anim={p1.animState}[{p1.animIndex}]");
                 y += lineHeight;
                 GUI.Label(new Rect(10, y, 300, lineHeight), $"Round: {state.round} Timer: {state.timer} showLaban: {state.showLaban}");
                 y += lineHeight;

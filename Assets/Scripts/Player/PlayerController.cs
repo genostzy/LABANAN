@@ -5,35 +5,55 @@ namespace LABANAN
     [System.Serializable]
     public class PlayerController
     {
-        // Constants (fixed-point, scale = 1000)
-        public const int GRAVITY = 25;             // 0.025 per frame
-        public const int JUMP_FORCE = 500;          // 0.5 per frame upward
-        public const int MOVE_SPEED = 120;          // 0.12 per frame
+        // ── Physics (fixed-point, scale = 1000) ──
+        public const int GRAVITY = 35;
+        public const int JUMP_FORCE = 500;
+        public const int MOVE_SPEED = 120;
         public const int MAX_SPEED = 120;
+        public const int SLOW_MAX_SPEED = 60;
         public const int ACCELERATION = 15;
         public const int DECELERATION = 8;
         public const int KNOCKBACK_FORCE = 80;
-        public const int LAUNCH_SPEED = 600;         // fast dash
-        public const int LAUNCH_DURATION = 6;        // 0.1s dash
-        public const int SWORD_DAMAGE = 10;
+        public const int PARRY_KNOCKBACK_FORCE = 120;
+        public const int LAUNCH_SPEED = 350;
+        public const int LAUNCH_DURATION = 10;
+
+        // ── Damage ──
+        public const int MAX_HEALTH = 100;
+        public const int SWORD_DAMAGE = 25;
+        public const int SUNGKIT_DAMAGE = 25;
+        public const int LAUNCH_DAMAGE = 30;
         public const int PLATFORM_DAMAGE = 500;
-        public const int MAX_HEALTH = 500;
 
-        // Player body size in fixed-point
-        public const int BODY_WIDTH = 640;   // 0.64 units
-        public const int BODY_HEIGHT = 1000; // 1.0 units (64px sprite at 64ppu)
+        // ── Stamina ──
+        public const int MAX_STAMINA = 100;
+        public const int SWORD_STAMINA_COST = 5;
+        public const int SUNGKIT_STAMINA_COST = 20;
+        public const int LAUNCH_STAMINA_COST = 60;
+        public const int STAMINA_REGEN = 2;
 
-        // Cooldowns in frames (60fps)
-        public const int ATTACK_COOLDOWN = 30;      // 0.5s
+        // ── Body ──
+        public const int BODY_WIDTH = 640;
+        public const int BODY_HEIGHT = 1000;
+
+        // ── Cooldowns (frames @ 60fps) ──
+        public const int ATTACK_COOLDOWN = 30;
         public const int JUMP_COOLDOWN = 15;
-        public const int SUNGKIT_COOLDOWN = 180;    // 3s
-        public const int LAUNCH_COOLDOWN = 300;     // 5s
+        public const int SUNGKIT_COOLDOWN = 180;
+        public const int LAUNCH_COOLDOWN = 300;
         public const int KNOCKBACK_DURATION = 18;
         public const int ACTION_LOCK_DURATION = 2;
-        public const int BLOCK_MAX_DURATION = 180;  // 3s max hold
-        public const int BLOCK_COOLDOWN = 60;       // 1s cooldown after max
-        public const int ATTACK_STARTUP = 3;        // 0.05s before hitbox active
-        public const int CROUCH_SPEED = 40;         // slowed movement while crouching
+        public const int BLOCK_MAX_DURATION = 180;
+        public const int BLOCK_COOLDOWN = 60;
+        public const int ATTACK_STARTUP = 3;
+        public const int CROUCH_SPEED = 40;
+
+        // ── Parry ──
+        public const int PARRY_WINDOW = 10;
+        public const int PARRY_HEAL = 10;
+
+        // ── Slow debuff ──
+        public const int SUNGKIT_SLOW_DURATION = 90;
 
         // Animation states
         public const int IDLE_RIGHT = 10;
@@ -91,6 +111,11 @@ namespace LABANAN
             state.sungkitCooldownLeft = Max(0, state.sungkitCooldownLeft - 1);
             state.launchCooldownLeft = Max(0, state.launchCooldownLeft - 1);
             state.actionLockFramesLeft = Max(0, state.actionLockFramesLeft - 1);
+            state.blockCooldownLeft = Max(0, state.blockCooldownLeft - 1);
+            state.slowTimer = Max(0, state.slowTimer - 1);
+
+            // Stamina regen
+            state.stamina = Min(state.stamina + STAMINA_REGEN, MAX_STAMINA);
 
             if (state.isKnockedBack)
             {
@@ -114,9 +139,7 @@ namespace LABANAN
 
         private static PlayerState ProcessInput(PlayerState state, InputData input)
         {
-            state.blockCooldownLeft = Max(0, state.blockCooldownLeft - 1);
-
-            // Block logic: hold to block, release = no cooldown, max 3s = 1s cooldown
+            // Block / Parry logic
             if (input.HasBlock && state.blockCooldownLeft <= 0 && !state.blocking)
             {
                 state.blocking = true;
@@ -137,24 +160,25 @@ namespace LABANAN
                 }
                 else
                 {
-                    // Released early - no cooldown
                     state.blocking = false;
                     state.blockTimer = 0;
                 }
             }
 
-            // Movement blocked while attacking, blocking, or crouching
+            int effectiveMaxSpeed = state.slowTimer > 0 ? SLOW_MAX_SPEED : MAX_SPEED;
+
+            // Movement
             if (!state.attacking && !state.sungkit && !state.launch && !state.blocking && !state.crouching)
             {
                 if (input.HasLeft && !input.HasRight)
                 {
-                    state.speed = Max(state.speed - ACCELERATION, -MAX_SPEED);
+                    state.speed = Max(state.speed - ACCELERATION, -effectiveMaxSpeed);
                     state.facingLeft = true;
                     state.moving = true;
                 }
                 else if (input.HasRight && !input.HasLeft)
                 {
-                    state.speed = Min(state.speed + ACCELERATION, MAX_SPEED);
+                    state.speed = Min(state.speed + ACCELERATION, effectiveMaxSpeed);
                     state.facingLeft = false;
                     state.moving = true;
                 }
@@ -187,25 +211,28 @@ namespace LABANAN
 
             state.crouching = input.HasDown;
 
-            // Attacks - only if not already attacking and action lock free
+            // Attacks - check stamina first
             if (!state.attacking && !state.sungkit && !state.launch && state.actionLockFramesLeft <= 0 && !state.crouching)
             {
-                if (input.HasAttack)
+                if (input.HasAttack && state.stamina >= SWORD_STAMINA_COST)
                 {
                     state.attacking = true;
+                    state.stamina -= SWORD_STAMINA_COST;
                     state.attackCooldownLeft = ATTACK_COOLDOWN;
                     state.actionLockFramesLeft = ACTION_LOCK_DURATION;
                     state.attackStartupFrames = ATTACK_STARTUP;
                 }
-                else if (input.HasSungkit)
+                else if (input.HasSungkit && state.sungkitCooldownLeft <= 0 && state.stamina >= SUNGKIT_STAMINA_COST)
                 {
                     state.sungkit = true;
+                    state.stamina -= SUNGKIT_STAMINA_COST;
                     state.sungkitCooldownLeft = SUNGKIT_COOLDOWN;
                     state.actionLockFramesLeft = ACTION_LOCK_DURATION;
                 }
-                else if (input.HasLaunch)
+                else if (input.HasLaunch && state.stamina >= LAUNCH_STAMINA_COST)
                 {
                     state.launch = true;
+                    state.stamina -= LAUNCH_STAMINA_COST;
                     state.launchTimer = LAUNCH_DURATION;
                     state.launchCooldownLeft = LAUNCH_COOLDOWN;
                     state.actionLockFramesLeft = ACTION_LOCK_DURATION;
@@ -242,8 +269,6 @@ namespace LABANAN
             int nextY = state.y + state.yVelocity;
 
             state.isOnGround = false;
-
-            int halfW = BODY_WIDTH / 2;
 
             CheckPlatform(ref nextX, ref nextY, ref state.isOnGround, ref state.yVelocity, ref state.jumping,
                 platforms.MainX, platforms.MainWidth, platforms.MainY);
@@ -288,20 +313,6 @@ namespace LABANAN
         private static int ClampX(int x)
         {
             return x;
-        }
-
-        private static PlayerState ApplyKnockback(PlayerState state)
-        {
-            state.x += KNOCKBACK_FORCE * state.knockbackDirection;
-            state.knockbackTimer -= 1;
-
-            if (state.knockbackTimer <= 0)
-            {
-                state.isKnockedBack = false;
-                state.knockbackTimer = 0;
-            }
-
-            return state;
         }
 
         private static PlayerState UpdateAnimation(PlayerState state)
@@ -370,33 +381,59 @@ namespace LABANAN
             return state;
         }
 
-        public static (int p1Damage, int p2Damage, bool p1Knockback, bool p2Knockback) CheckAttackCollisions(
+        public struct CombatResult
+        {
+            public int damage;
+            public bool knockbackDefender;
+            public bool knockbackAttacker;
+            public bool perfectParry;
+            public bool isSungkit;
+            public int attackType; // 1=sword, 2=sungkit, 3=launch
+        }
+
+        public static CombatResult CheckAttackCollisions(
             PlayerState attacker, PlayerState defender)
         {
-            int p1Damage = 0;
-            int p2Damage = 0;
-            bool p1Knockback = false;
-            bool p2Knockback = false;
+            var result = new CombatResult();
 
             Rect attackHitbox = GetAttackHitbox(attacker);
             Rect defenderHitbox = GetPlayerHitbox(defender);
 
             bool hit = attackHitbox.Overlaps(defenderHitbox) && IsAttacking(attacker);
+            if (!hit) return result;
 
-            if (hit)
+            result.attackType = attacker.attacking ? 1 : attacker.sungkit ? 2 : 3;
+
+            if (!defender.blocking)
             {
-                if (!defender.blocking)
+                result.damage = GetAttackDamage(attacker);
+                result.knockbackDefender = true;
+                result.isSungkit = attacker.sungkit;
+            }
+            else
+            {
+                bool isPerfectParry = defender.blockTimer <= PARRY_WINDOW;
+
+                if (isPerfectParry)
                 {
-                    p2Damage = SWORD_DAMAGE;
-                    p2Knockback = true;
+                    result.knockbackAttacker = true;
+                    result.perfectParry = true;
                 }
                 else
                 {
-                    p1Knockback = true;
+                    result.knockbackAttacker = true;
                 }
             }
 
-            return (p1Damage, p2Damage, p1Knockback, p2Knockback);
+            return result;
+        }
+
+        public static int GetAttackDamage(PlayerState attacker)
+        {
+            if (attacker.attacking) return SWORD_DAMAGE;
+            if (attacker.sungkit) return SUNGKIT_DAMAGE;
+            if (attacker.launch) return LAUNCH_DAMAGE;
+            return 0;
         }
 
         private static bool IsAttacking(PlayerState state)

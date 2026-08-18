@@ -49,13 +49,16 @@ namespace LABANAN
         // Action lock
         public int actionLockFramesLeft;
 
+        // Slow debuff (from sungkit hit)
+        public int slowTimer;
+
         public static PlayerState CreateDefault(int spawnX, int spawnY, bool facingLeft)
         {
             return new PlayerState
             {
                 x = spawnX,
                 y = spawnY,
-                health = 500,
+                health = 100,
                 stamina = 100,
                 speed = 0,
                 yVelocity = 0,
@@ -83,7 +86,8 @@ namespace LABANAN
                 blockTimer = 0,
                 blockCooldownLeft = 0,
                 launchTimer = 0,
-                actionLockFramesLeft = 0
+                actionLockFramesLeft = 0,
+                slowTimer = 0
             };
         }
 
