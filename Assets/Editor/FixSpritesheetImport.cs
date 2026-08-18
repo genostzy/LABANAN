@@ -18,8 +18,12 @@ namespace LABANAN.Editor
             FixTexture("Assets/Resources/Sprites/Blue/BLUE_SPRITESHEET.png");
             FixTexture("Assets/Sprites/Red/RED_SPRITESHEET.png");
             FixTexture("Assets/Sprites/Blue/BLUE_SPRITESHEET.png");
+            FixTexture("Assets/UI/BG NIGHT.png");
+            FixTexture("Assets/UI/PLATFORM.png");
+            FixTexture("Assets/Resources/Sprites/BG NIGHT.png");
+            FixTexture("Assets/Resources/Sprites/PLATFORM.png");
             AssetDatabase.Refresh();
-            Debug.Log("Spritesheet import settings fixed!");
+            Debug.Log("All textures fixed!");
         }
 
         static void FixTexture(string path)

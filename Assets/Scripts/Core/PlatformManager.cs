@@ -5,10 +5,10 @@ namespace LABANAN
     [System.Serializable]
     public class PlatformManager
     {
-        // Main platform spans full screen width
-        public int MainX = 0;
-        public int MainY = 1000;
-        public int MainWidth = 18000;
+        // Main platform - narrower so players can fall off edges
+        public int MainX = 3000;
+        public int MainY = 500;
+        public int MainWidth = 12000;
         public int MainHeight = 500;
 
         // Left platform (elevated)
@@ -23,7 +23,7 @@ namespace LABANAN
         public int RightWidth = 3000;
         public int RightHeight = 500;
 
-        public int DeathY = -3000;
+        public int DeathY = -5000;
 
         public bool IsOnDeathZone(PlayerState player)
         {

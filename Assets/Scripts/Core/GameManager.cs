@@ -22,9 +22,9 @@ namespace LABANAN
 
         // Spawn positions (fixed-point)
         private const int P1_SPAWN_X = 6000;
-        private const int P1_SPAWN_Y = 1000;
+        private const int P1_SPAWN_Y = 500;
         private const int P2_SPAWN_X = 12000;
-        private const int P2_SPAWN_Y = 1000;
+        private const int P2_SPAWN_Y = 500;
 
         // Frame timing
         private const int FRAMES_PER_SECOND = 60;
@@ -204,16 +204,14 @@ namespace LABANAN
         {
             if (platforms.IsOnDeathZone(currentState.player1))
             {
-                Debug.Log($"[DEATH] P1 hit death zone at y={currentState.player1.y}");
-                currentState.player1.health -= PlayerController.PLATFORM_DAMAGE;
-                if (currentState.player1.health < 0) currentState.player1.health = 0;
+                Debug.Log($"[DEATH] P1 fell off stage at y={currentState.player1.y}");
+                currentState.player1.health = 0;
             }
 
             if (platforms.IsOnDeathZone(currentState.player2))
             {
-                Debug.Log($"[DEATH] P2 hit death zone at y={currentState.player2.y}");
-                currentState.player2.health -= PlayerController.PLATFORM_DAMAGE;
-                if (currentState.player2.health < 0) currentState.player2.health = 0;
+                Debug.Log($"[DEATH] P2 fell off stage at y={currentState.player2.y}");
+                currentState.player2.health = 0;
             }
         }
 
@@ -269,20 +267,28 @@ namespace LABANAN
             if (currentState.round < maxRounds)
             {
                 currentState.round++;
-                currentState.player1 = PlayerState.CreateDefault(P1_SPAWN_X, P1_SPAWN_Y, false);
-                currentState.player2 = PlayerState.CreateDefault(P2_SPAWN_X, P2_SPAWN_Y, true);
-                currentState.timer = roundTimerSeconds;
-                currentState.timerFrameCounter = 0;
-
-                // Switch music at round 3
-                if (currentState.round == 3 && AudioManager.Instance != null)
-                {
-                    AudioManager.Instance.PlayLevel2();
-                }
             }
             else
             {
-                ResetGame();
+                currentState.round = 1;
+                currentState.player1Wins = 0;
+                currentState.player2Wins = 0;
+            }
+
+            currentState.player1 = PlayerState.CreateDefault(P1_SPAWN_X, P1_SPAWN_Y, false);
+            currentState.player2 = PlayerState.CreateDefault(P2_SPAWN_X, P2_SPAWN_Y, true);
+            currentState.timer = roundTimerSeconds;
+            currentState.timerFrameCounter = 0;
+            currentState.isGameOver = false;
+            currentState.showBlueWin = false;
+            currentState.showRedWin = false;
+            currentState.winDisplayTimerFrames = 0;
+            currentState.showLaban = false;
+            currentState.labanTimerFrames = 0;
+
+            if (currentState.round == 3 && AudioManager.Instance != null)
+            {
+                AudioManager.Instance.PlayLevel2();
             }
         }
 

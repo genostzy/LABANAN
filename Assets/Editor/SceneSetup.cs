@@ -94,10 +94,19 @@ namespace LABANAN.Editor
             var camera = cam.AddComponent<Camera>();
             camera.orthographic = true;
             camera.orthographicSize = 6;
-            camera.backgroundColor = new Color(0.1f, 0.1f, 0.15f);
+            camera.backgroundColor = new Color(0.05f, 0.05f, 0.1f);
             camera.clearFlags = CameraClearFlags.SolidColor;
-            cam.transform.position = new Vector3(9, 2.5f, -10);
+            cam.transform.position = new Vector3(9, 1.5f, -10);
             cam.AddComponent<AudioListener>();
+
+            // Background - will be set up at runtime by GameLoop
+            var bg = new GameObject("Background");
+            bg.transform.position = new Vector3(9f, 2.5f, 5);
+            var bgSR = bg.AddComponent<SpriteRenderer>();
+            bgSR.sortingOrder = -1;
+            bgSR.sprite = CreateSquareSprite();
+            bgSR.color = new Color(0.05f, 0.05f, 0.1f);
+            bg.transform.localScale = new Vector3(20f, 12f, 1f);
 
             // Managers
             var managers = new GameObject("Managers");
@@ -113,7 +122,7 @@ namespace LABANAN.Editor
 
             // Player 1 (Red) - spawn on main platform
             var p1 = new GameObject("Player1_Red");
-            p1.transform.position = new Vector3(6f, 1f, 0);
+            p1.transform.position = new Vector3(6f, 0.5f, 0);
             var sr1 = p1.AddComponent<SpriteRenderer>();
             sr1.sortingOrder = 2;
             var redTex = AssetDatabase.LoadAssetAtPath<Texture2D>("Assets/Sprites/Red/RED_SPRITESHEET.png");
@@ -122,26 +131,24 @@ namespace LABANAN.Editor
 
             // Player 2 (Blue) - spawn on main platform
             var p2 = new GameObject("Player2_Blue");
-            p2.transform.position = new Vector3(12f, 1f, 0);
+            p2.transform.position = new Vector3(12f, 0.5f, 0);
             var sr2 = p2.AddComponent<SpriteRenderer>();
             sr2.sortingOrder = 2;
             var blueTex = AssetDatabase.LoadAssetAtPath<Texture2D>("Assets/Sprites/Blue/BLUE_SPRITESHEET.png");
             if (blueTex != null)
                 sr2.sprite = Sprite.Create(blueTex, new Rect(0, 0, 64, 64), new Vector2(0.5f, 0f), 64);
 
-            // Platform visuals
-            var platformMat = new Material(Shader.Find("Sprites/Default"));
-
-            // Main platform - full screen width
+            // Platform visuals - match collision rects exactly (hidden at runtime by GameLoop)
+            // Main platform: X=3.0-15.0, Y=0.0-0.5
             var mainPlat = new GameObject("MainPlatform");
-            mainPlat.transform.position = new Vector3(9f, 0.75f, 0);
+            mainPlat.transform.position = new Vector3(9f, 0.25f, 0);
             var mainSR = mainPlat.AddComponent<SpriteRenderer>();
             mainSR.sortingOrder = 1;
-            mainSR.color = new Color(0.3f, 0.3f, 0.35f);
+            mainSR.color = new Color(0.3f, 0.35f, 0.3f);
             mainSR.sprite = CreateSquareSprite();
-            mainPlat.transform.localScale = new Vector3(20f, 0.5f, 1f);
+            mainPlat.transform.localScale = new Vector3(12f, 0.5f, 1f);
 
-            // Left platform
+            // Left platform: X=1.5-4.5, Y=3.0-3.5
             var leftPlat = new GameObject("LeftPlatform");
             leftPlat.transform.position = new Vector3(3f, 3.25f, 0);
             var leftSR = leftPlat.AddComponent<SpriteRenderer>();
@@ -150,7 +157,7 @@ namespace LABANAN.Editor
             leftSR.sprite = CreateSquareSprite();
             leftPlat.transform.localScale = new Vector3(3f, 0.5f, 1f);
 
-            // Right platform
+            // Right platform: X=13.5-16.5, Y=3.0-3.5
             var rightPlat = new GameObject("RightPlatform");
             rightPlat.transform.position = new Vector3(15f, 3.25f, 0);
             var rightSR = rightPlat.AddComponent<SpriteRenderer>();

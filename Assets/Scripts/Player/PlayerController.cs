@@ -13,7 +13,8 @@ namespace LABANAN
         public const int ACCELERATION = 15;
         public const int DECELERATION = 8;
         public const int KNOCKBACK_FORCE = 80;
-        public const int LAUNCH_SPEED = 250;
+        public const int LAUNCH_SPEED = 600;         // fast dash
+        public const int LAUNCH_DURATION = 6;        // 0.1s dash
         public const int SWORD_DAMAGE = 10;
         public const int PLATFORM_DAMAGE = 500;
         public const int MAX_HEALTH = 500;
@@ -23,12 +24,16 @@ namespace LABANAN
         public const int BODY_HEIGHT = 1000; // 1.0 units (64px sprite at 64ppu)
 
         // Cooldowns in frames (60fps)
-        public const int ATTACK_COOLDOWN = 60;
+        public const int ATTACK_COOLDOWN = 30;      // 0.5s
         public const int JUMP_COOLDOWN = 15;
-        public const int SUNGKIT_COOLDOWN = 120;
-        public const int LAUNCH_COOLDOWN = 150;
+        public const int SUNGKIT_COOLDOWN = 180;    // 3s
+        public const int LAUNCH_COOLDOWN = 300;     // 5s
         public const int KNOCKBACK_DURATION = 18;
-        public const int ACTION_LOCK_DURATION = 30;
+        public const int ACTION_LOCK_DURATION = 2;
+        public const int BLOCK_MAX_DURATION = 180;  // 3s max hold
+        public const int BLOCK_COOLDOWN = 60;       // 1s cooldown after max
+        public const int ATTACK_STARTUP = 3;        // 0.05s before hitbox active
+        public const int CROUCH_SPEED = 40;         // slowed movement while crouching
 
         // Animation states
         public const int IDLE_RIGHT = 10;
@@ -45,6 +50,8 @@ namespace LABANAN
         public const int LAUNCH_LEFT = 9;
         public const int BLOCK_RIGHT = 12;
         public const int BLOCK_LEFT = 13;
+        public const int CROUCH_RIGHT = 16;
+        public const int CROUCH_LEFT = 17;
 
         public static int GetAnimFrames(int animState)
         {
@@ -57,7 +64,21 @@ namespace LABANAN
                 case SUNGKIT_RIGHT: case SUNGKIT_LEFT: return 5;
                 case LAUNCH_RIGHT: case LAUNCH_LEFT: return 6;
                 case BLOCK_RIGHT: case BLOCK_LEFT: return 1;
+                case CROUCH_RIGHT: case CROUCH_LEFT: return 1;
                 default: return 1;
+            }
+        }
+
+        public static int GetAnimSpeed(int animState)
+        {
+            switch (animState)
+            {
+                case RUNNING_RIGHT: case RUNNING_LEFT: return 8;
+                case ATTACK_RIGHT: case ATTACK_LEFT: return 6;
+                case SUNGKIT_RIGHT: case SUNGKIT_LEFT: return 6;
+                case LAUNCH_RIGHT: case LAUNCH_LEFT: return 6;
+                case IDLE_RIGHT: case IDLE_LEFT: return 12;
+                default: return 10;
             }
         }
 
@@ -93,18 +114,58 @@ namespace LABANAN
 
         private static PlayerState ProcessInput(PlayerState state, InputData input)
         {
-            // Movement - always allowed
-            if (input.HasLeft && !input.HasRight)
+            state.blockCooldownLeft = Max(0, state.blockCooldownLeft - 1);
+
+            // Block logic: hold to block, release = no cooldown, max 3s = 1s cooldown
+            if (input.HasBlock && state.blockCooldownLeft <= 0 && !state.blocking)
             {
-                state.speed = Max(state.speed - ACCELERATION, -MAX_SPEED);
-                state.facingLeft = true;
-                state.moving = true;
+                state.blocking = true;
+                state.blockTimer = 0;
             }
-            else if (input.HasRight && !input.HasLeft)
+
+            if (state.blocking)
             {
-                state.speed = Min(state.speed + ACCELERATION, MAX_SPEED);
-                state.facingLeft = false;
-                state.moving = true;
+                if (input.HasBlock)
+                {
+                    state.blockTimer++;
+                    if (state.blockTimer >= BLOCK_MAX_DURATION)
+                    {
+                        state.blocking = false;
+                        state.blockTimer = 0;
+                        state.blockCooldownLeft = BLOCK_COOLDOWN;
+                    }
+                }
+                else
+                {
+                    // Released early - no cooldown
+                    state.blocking = false;
+                    state.blockTimer = 0;
+                }
+            }
+
+            // Movement blocked while attacking, blocking, or crouching
+            if (!state.attacking && !state.sungkit && !state.launch && !state.blocking && !state.crouching)
+            {
+                if (input.HasLeft && !input.HasRight)
+                {
+                    state.speed = Max(state.speed - ACCELERATION, -MAX_SPEED);
+                    state.facingLeft = true;
+                    state.moving = true;
+                }
+                else if (input.HasRight && !input.HasLeft)
+                {
+                    state.speed = Min(state.speed + ACCELERATION, MAX_SPEED);
+                    state.facingLeft = false;
+                    state.moving = true;
+                }
+                else
+                {
+                    if (state.speed > 0)
+                        state.speed = Max(state.speed - DECELERATION, 0);
+                    else if (state.speed < 0)
+                        state.speed = Min(state.speed + DECELERATION, 0);
+                    state.moving = Abs(state.speed) > 100;
+                }
             }
             else
             {
@@ -127,29 +188,33 @@ namespace LABANAN
             state.crouching = input.HasDown;
 
             // Attacks - only if not already attacking and action lock free
-            if (!state.attacking && !state.sungkit && !state.launch && state.actionLockFramesLeft <= 0)
+            if (!state.attacking && !state.sungkit && !state.launch && state.actionLockFramesLeft <= 0 && !state.crouching)
             {
-                if (input.HasAttack && state.attackCooldownLeft <= 0)
+                if (input.HasAttack)
                 {
                     state.attacking = true;
                     state.attackCooldownLeft = ATTACK_COOLDOWN;
                     state.actionLockFramesLeft = ACTION_LOCK_DURATION;
+                    state.attackStartupFrames = ATTACK_STARTUP;
                 }
-                else if (input.HasSungkit && state.sungkitCooldownLeft <= 0)
+                else if (input.HasSungkit)
                 {
                     state.sungkit = true;
                     state.sungkitCooldownLeft = SUNGKIT_COOLDOWN;
                     state.actionLockFramesLeft = ACTION_LOCK_DURATION;
                 }
-                else if (input.HasLaunch && state.launchCooldownLeft <= 0)
+                else if (input.HasLaunch)
                 {
                     state.launch = true;
+                    state.launchTimer = LAUNCH_DURATION;
                     state.launchCooldownLeft = LAUNCH_COOLDOWN;
                     state.actionLockFramesLeft = ACTION_LOCK_DURATION;
                 }
             }
 
-            state.blocking = input.HasBlock;
+            // Tick attack startup
+            if (state.attackStartupFrames > 0)
+                state.attackStartupFrames--;
 
             return state;
         }
@@ -160,6 +225,12 @@ namespace LABANAN
             {
                 int launchDir = state.facingLeft ? -1 : 1;
                 state.x += LAUNCH_SPEED * launchDir;
+                state.launchTimer--;
+                if (state.launchTimer <= 0)
+                {
+                    state.launch = false;
+                    state.launchTimer = 0;
+                }
             }
 
             if (!state.isOnGround)
@@ -183,6 +254,8 @@ namespace LABANAN
 
             state.x = ClampX(nextX);
             state.y = nextY;
+
+            state.falling = !state.isOnGround && state.yVelocity < 0;
 
             return state;
         }
@@ -214,8 +287,6 @@ namespace LABANAN
 
         private static int ClampX(int x)
         {
-            if (x < 1000) return 1000;
-            if (x > 17000) return 17000;
             return x;
         }
 
@@ -245,6 +316,10 @@ namespace LABANAN
                 state.animState = state.facingLeft ? LAUNCH_LEFT : LAUNCH_RIGHT;
             else if (state.blocking)
                 state.animState = state.facingLeft ? BLOCK_LEFT : BLOCK_RIGHT;
+            else if (state.crouching)
+                state.animState = state.facingLeft ? CROUCH_LEFT : CROUCH_RIGHT;
+            else if (state.falling)
+                state.animState = state.facingLeft ? JUMP_LEFT : JUMP_RIGHT;
             else if (state.jumping)
                 state.animState = state.facingLeft ? JUMP_LEFT : JUMP_RIGHT;
             else if (state.moving)
@@ -252,27 +327,42 @@ namespace LABANAN
             else
                 state.animState = state.facingLeft ? IDLE_LEFT : IDLE_RIGHT;
 
+            bool jumpAnim = state.animState == JUMP_LEFT || state.animState == JUMP_RIGHT;
+
             if (prevAnim != state.animState)
             {
                 state.animTick = 0;
-                state.animIndex = 0;
+                state.animIndex = state.falling && jumpAnim ? GetAnimFrames(state.animState) - 1 : 0;
+            }
+            else if (state.falling && jumpAnim && state.animIndex < GetAnimFrames(state.animState) - 1)
+            {
+                state.animIndex = GetAnimFrames(state.animState) - 1;
             }
 
             state.animTick++;
-            if (state.animTick >= 15)
+            int tickThreshold = GetAnimSpeed(state.animState);
+            if (state.animTick >= tickThreshold)
             {
                 state.animTick = 0;
-                state.animIndex++;
                 int maxFrames = GetAnimFrames(state.animState);
-                if (state.animIndex >= maxFrames)
+
+                if (state.falling && jumpAnim)
                 {
-                    state.animIndex = 0;
-                    if (state.attacking || state.sungkit || state.launch)
+                    state.animIndex--;
+                    if (state.animIndex < 0)
+                        state.animIndex = 0;
+                }
+                else
+                {
+                    state.animIndex++;
+                    if (state.animIndex >= maxFrames)
                     {
-                        state.attacking = false;
-                        state.sungkit = false;
-                        state.launch = false;
-                        state.jumping = false;
+                        state.animIndex = 0;
+                        if (state.attacking || state.sungkit)
+                        {
+                            state.attacking = false;
+                            state.sungkit = false;
+                        }
                     }
                 }
             }
@@ -311,10 +401,12 @@ namespace LABANAN
 
         private static bool IsAttacking(PlayerState state)
         {
-            return state.attacking || state.sungkit || state.launch;
+            int maxFrames = GetAnimFrames(state.animState);
+            bool inHitFrames = state.animIndex >= maxFrames - 2;
+            return inHitFrames && (state.attacking || state.sungkit || state.launch);
         }
 
-        private static Rect GetAttackHitbox(PlayerState state)
+        public static Rect GetAttackHitbox(PlayerState state)
         {
             int hitboxX, hitboxY, hitboxW, hitboxH;
 
@@ -323,21 +415,21 @@ namespace LABANAN
                 hitboxW = 500;
                 hitboxH = 100;
                 hitboxY = state.y + 500;
-                hitboxX = state.facingLeft ? state.x - 500 : state.x + 500;
+                hitboxX = state.facingLeft ? state.x - 500 : state.x + 150;
             }
             else if (state.sungkit)
             {
-                hitboxW = 700;
+                hitboxW = 400;
                 hitboxH = 100;
                 hitboxY = state.y + 200;
-                hitboxX = state.facingLeft ? state.x - 700 : state.x + 500;
+                hitboxX = state.facingLeft ? state.x - 400 : state.x + 150;
             }
             else if (state.launch)
             {
                 hitboxW = 500;
                 hitboxH = 150;
                 hitboxY = state.y + 500;
-                hitboxX = state.facingLeft ? state.x - 500 : state.x + 500;
+                hitboxX = state.facingLeft ? state.x - 500 : state.x + 150;
             }
             else
             {
@@ -354,11 +446,12 @@ namespace LABANAN
 
         public static Rect GetPlayerHitbox(PlayerState state)
         {
+            int h = state.crouching ? BODY_HEIGHT / 2 : BODY_HEIGHT;
             return new Rect(
                 FixedMath.ToFloat(state.x - BODY_WIDTH / 2),
                 FixedMath.ToFloat(state.y),
                 FixedMath.ToFloat(BODY_WIDTH),
-                FixedMath.ToFloat(BODY_HEIGHT)
+                FixedMath.ToFloat(h)
             );
         }
 

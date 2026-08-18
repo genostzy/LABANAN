@@ -22,6 +22,7 @@ namespace LABANAN
         public bool blocking;
         public bool jumping;
         public bool crouching;
+        public bool falling;
         public int animState;
         public int animTick;
         public int animIndex;
@@ -36,6 +37,14 @@ namespace LABANAN
         public int jumpCooldownLeft;
         public int sungkitCooldownLeft;
         public int launchCooldownLeft;
+        public int attackStartupFrames;
+
+        // Block
+        public int blockTimer;
+        public int blockCooldownLeft;
+
+        // Launch dash
+        public int launchTimer;
 
         // Action lock
         public int actionLockFramesLeft;
@@ -59,6 +68,7 @@ namespace LABANAN
                 blocking = false,
                 jumping = false,
                 crouching = false,
+                falling = false,
                 animState = facingLeft ? 11 : 10,
                 animTick = 0,
                 animIndex = 0,
@@ -69,6 +79,10 @@ namespace LABANAN
                 jumpCooldownLeft = 0,
                 sungkitCooldownLeft = 0,
                 launchCooldownLeft = 0,
+                attackStartupFrames = 0,
+                blockTimer = 0,
+                blockCooldownLeft = 0,
+                launchTimer = 0,
                 actionLockFramesLeft = 0
             };
         }

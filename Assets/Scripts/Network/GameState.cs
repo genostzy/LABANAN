@@ -34,8 +34,8 @@ namespace LABANAN
             return new GameState
             {
                 frame = 0,
-                player1 = PlayerState.CreateDefault(6000, 1000, false),
-                player2 = PlayerState.CreateDefault(12000, 1000, true),
+                player1 = PlayerState.CreateDefault(6000, 500, false),
+                player2 = PlayerState.CreateDefault(12000, 500, true),
                 round = 1,
                 player1Wins = 0,
                 player2Wins = 0,
@@ -135,6 +135,10 @@ namespace LABANAN
             w.Write(p.jumpCooldownLeft);
             w.Write(p.sungkitCooldownLeft);
             w.Write(p.launchCooldownLeft);
+            w.Write(p.attackStartupFrames);
+            w.Write(p.blockTimer);
+            w.Write(p.blockCooldownLeft);
+            w.Write(p.launchTimer);
             w.Write(p.actionLockFramesLeft);
         }
 
@@ -167,6 +171,10 @@ namespace LABANAN
                 jumpCooldownLeft = r.ReadInt32(),
                 sungkitCooldownLeft = r.ReadInt32(),
                 launchCooldownLeft = r.ReadInt32(),
+                attackStartupFrames = r.ReadInt32(),
+                blockTimer = r.ReadInt32(),
+                blockCooldownLeft = r.ReadInt32(),
+                launchTimer = r.ReadInt32(),
                 actionLockFramesLeft = r.ReadInt32()
             };
         }
