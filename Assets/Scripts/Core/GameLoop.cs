@@ -46,8 +46,9 @@ namespace LABANAN
         private Text p2NameTag;
         private Text p1CooldownText;
         private Text p2CooldownText;
-        private Image[] p1WinDots = new Image[4];
-        private Image[] p2WinDots = new Image[4];
+        private Image[] p1WinDots = new Image[3];
+        private Image[] p2WinDots = new Image[3];
+        private static Sprite whiteSprite;
 
         private void Start()
         {
@@ -185,12 +186,25 @@ namespace LABANAN
             canvasObj = new GameObject("HUD_Canvas");
             var canvas = canvasObj.AddComponent<Canvas>();
             canvas.renderMode = RenderMode.ScreenSpaceOverlay;
-            canvasObj.AddComponent<CanvasScaler>();
+            var scaler = canvasObj.AddComponent<CanvasScaler>();
+            scaler.uiScaleMode = CanvasScaler.ScaleMode.ScaleWithScreenSize;
+            scaler.referenceResolution = new Vector2(1920, 1080);
             canvasObj.AddComponent<GraphicRaycaster>();
 
             var es = new GameObject("EventSystem");
             es.AddComponent<UnityEngine.EventSystems.EventSystem>();
             es.AddComponent<UnityEngine.EventSystems.StandaloneInputModule>();
+
+            // Preload white sprite for all UI images
+            if (whiteSprite == null)
+            {
+                var tex = new Texture2D(4, 4);
+                var px = new Color[16];
+                for (int i = 0; i < 16; i++) px[i] = Color.white;
+                tex.SetPixels(px);
+                tex.Apply();
+                whiteSprite = Sprite.Create(tex, new Rect(0, 0, 4, 4), new Vector2(0.5f, 0.5f), 4);
+            }
 
             // ── Nametags ──
             p1NameTag = CreateText(canvasObj.transform, "P1Name", "RED", 22, TextAnchor.MiddleCenter,
@@ -210,14 +224,14 @@ namespace LABANAN
             p2StaminaBar = CreateBar(canvasObj.transform, "P2StaminaBar", new Color(0.2f, 0.8f, 0.2f),
                 new Vector2(0.78f, 0.915f), new Vector2(0.98f, 0.932f));
 
-            // ── Win dots (4 max per player) ──
-            for (int i = 0; i < 4; i++)
+            // ── Win dots (3 per player for race to 3) ──
+            for (int i = 0; i < 3; i++)
             {
                 float xMin = 0.02f + i * 0.04f;
                 p1WinDots[i] = CreateBar(canvasObj.transform, $"P1Dot{i}", new Color(0.3f, 0.3f, 0.3f),
                     new Vector2(xMin, 0.895f), new Vector2(xMin + 0.03f, 0.912f));
 
-                float xMin2 = 0.86f + i * 0.04f;
+                float xMin2 = 0.88f + i * 0.04f;
                 p2WinDots[i] = CreateBar(canvasObj.transform, $"P2Dot{i}", new Color(0.3f, 0.3f, 0.3f),
                     new Vector2(xMin2, 0.895f), new Vector2(xMin2 + 0.03f, 0.912f));
             }
@@ -225,21 +239,20 @@ namespace LABANAN
             // ── Center: Timer + Round ──
             timerText = CreateText(canvasObj.transform, "TimerText", "60", 48, TextAnchor.MiddleCenter,
                 new Vector2(0.45f, 0.94f), new Vector2(0.55f, 0.98f), Color.white);
-            roundText = CreateText(canvasObj.transform, "RoundText", "Round 1", 20, TextAnchor.MiddleCenter,
+            roundText = CreateText(canvasObj.transform, "RoundText", "ROUND 1", 20, TextAnchor.MiddleCenter,
                 new Vector2(0.42f, 0.91f), new Vector2(0.58f, 0.935f), Color.white);
 
             // ── Cooldown indicators ──
-            p1CooldownText = CreateText(canvasObj.transform, "P1Cooldown", "J: READY  K: READY  L: READY", 16, TextAnchor.MiddleLeft,
+            p1CooldownText = CreateText(canvasObj.transform, "P1Cooldown", "J:READY  K:READY  L:READY", 16, TextAnchor.MiddleLeft,
                 new Vector2(0.02f, 0.87f), new Vector2(0.30f, 0.89f), new Color(0.8f, 0.8f, 0.8f));
-            p2CooldownText = CreateText(canvasObj.transform, "P2Cooldown", "J: READY  K: READY  L: READY", 16, TextAnchor.MiddleRight,
+            p2CooldownText = CreateText(canvasObj.transform, "P2Cooldown", "J:READY  K:READY  L:READY", 16, TextAnchor.MiddleRight,
                 new Vector2(0.70f, 0.87f), new Vector2(0.98f, 0.89f), new Color(0.8f, 0.8f, 0.8f));
 
-            // ── Laban text (starts ACTIVE, hidden by UpdateUI) ──
+            // ── Laban text ──
             labanText = CreateText(canvasObj.transform, "LabanText", "LABAN!", 120, TextAnchor.MiddleCenter,
                 new Vector2(0.15f, 0.35f), new Vector2(0.85f, 0.65f), Color.yellow);
-            labanText.gameObject.SetActive(true);
 
-            // ── Win overlay texts (hidden) ──
+            // ── Win overlay texts ──
             CreateText(canvasObj.transform, "P1WinsText", "", 28, TextAnchor.MiddleLeft,
                 new Vector2(0.02f, 0.85f), new Vector2(0.15f, 0.88f), Color.red);
             CreateText(canvasObj.transform, "P2WinsText", "", 28, TextAnchor.MiddleRight,
@@ -256,6 +269,7 @@ namespace LABANAN
             rt.offsetMin = Vector2.zero;
             rt.offsetMax = Vector2.zero;
             var img = obj.AddComponent<Image>();
+            img.sprite = whiteSprite;
             img.color = color;
             img.type = Image.Type.Filled;
             img.fillMethod = Image.FillMethod.Horizontal;
@@ -276,7 +290,9 @@ namespace LABANAN
             var t = obj.AddComponent<Text>();
             t.text = text;
             t.fontSize = fontSize;
-            t.font = Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf");
+            var font = Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf");
+            if (font == null) font = Font.CreateDynamicFontFromOSFont("Arial", fontSize);
+            t.font = font;
             t.alignment = alignment;
             t.color = color;
             t.raycastTarget = false;
@@ -516,7 +532,7 @@ namespace LABANAN
             }
 
             // ── Win dots ──
-            for (int i = 0; i < 4; i++)
+            for (int i = 0; i < 3; i++)
             {
                 if (p1WinDots[i] != null)
                     p1WinDots[i].color = i < state.player1Wins ? Color.red : new Color(0.3f, 0.3f, 0.3f);

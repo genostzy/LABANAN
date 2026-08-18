@@ -166,44 +166,6 @@ namespace LABANAN.Editor
             rightSR.sprite = CreateSquareSprite();
             rightPlat.transform.localScale = new Vector3(3f, 0.5f, 1f);
 
-            // Canvas
-            var canvasObj = new GameObject("Canvas");
-            var canvas = canvasObj.AddComponent<Canvas>();
-            canvas.renderMode = RenderMode.ScreenSpaceOverlay;
-            canvasObj.AddComponent<CanvasScaler>();
-            canvasObj.AddComponent<GraphicRaycaster>();
-
-            // Health Bars
-            CreateImage(canvasObj.transform, "P1HealthBar", Color.red,
-                new Vector2(0.02f, 0.92f), new Vector2(0.35f, 0.97f));
-            CreateImage(canvasObj.transform, "P2HealthBar", new Color(0, 0.5f, 1f),
-                new Vector2(0.65f, 0.92f), new Vector2(0.98f, 0.97f));
-
-            // Stamina Bars (below health)
-            CreateImage(canvasObj.transform, "P1StaminaBar", new Color(0.2f, 0.8f, 0.2f),
-                new Vector2(0.02f, 0.88f), new Vector2(0.25f, 0.91f));
-            CreateImage(canvasObj.transform, "P2StaminaBar", new Color(0.2f, 0.8f, 0.2f),
-                new Vector2(0.75f, 0.88f), new Vector2(0.98f, 0.91f));
-
-            CreateText(canvasObj.transform, "TimerText", "60", 48, TextAnchor.MiddleCenter,
-                new Vector2(0.45f, 0.92f), new Vector2(0.55f, 0.98f));
-            CreateText(canvasObj.transform, "RoundText", "Round 1", 32, TextAnchor.MiddleCenter,
-                new Vector2(0.35f, 0.82f), new Vector2(0.65f, 0.9f));
-            CreateText(canvasObj.transform, "P1WinsText", "Wins: 0", 28, TextAnchor.MiddleLeft,
-                new Vector2(0.02f, 0.85f), new Vector2(0.15f, 0.92f), Color.red);
-            CreateText(canvasObj.transform, "P2WinsText", "Wins: 0", 28, TextAnchor.MiddleRight,
-                new Vector2(0.85f, 0.85f), new Vector2(0.98f, 0.92f), new Color(0, 0.5f, 1f));
-
-            var laban = CreateText(canvasObj.transform, "LabanText", "LABAN!", 120, TextAnchor.MiddleCenter,
-                new Vector2(0.2f, 0.3f), new Vector2(0.8f, 0.7f), Color.yellow);
-            laban.gameObject.SetActive(false);
-
-            var es = new GameObject("EventSystem");
-            es.AddComponent<UnityEngine.EventSystems.EventSystem>();
-            es.AddComponent<UnityEngine.EventSystems.StandaloneInputModule>();
-
-            canvasObj.AddComponent<UIManager>();
-
             Debug.Log("Game scene created!");
         }
 
