@@ -35,6 +35,11 @@ namespace LABANAN
         // Post-win pause before next round
         public int postWinPause;
 
+        // Pre-win pause after death before win display
+        public int preWinPause;
+        public int preWinCaller; // 0=draw, 1=P1 wins, 2=P2 wins
+        public bool wasDraw;
+
         public static GameState CreateDefault()
         {
             return new GameState
@@ -55,7 +60,10 @@ namespace LABANAN
                 showRedWin = false,
                 winDisplayTimerFrames = 0,
                 roundStartTimer = 0,
-                postWinPause = 0
+                postWinPause = 0,
+                preWinPause = 0,
+                preWinCaller = 0,
+                wasDraw = false
             };
         }
 
@@ -89,6 +97,9 @@ namespace LABANAN
                 writer.Write(winDisplayTimerFrames);
                 writer.Write(roundStartTimer);
                 writer.Write(postWinPause);
+                writer.Write(preWinPause);
+                writer.Write(preWinCaller);
+                writer.Write(wasDraw);
                 return ms.ToArray();
             }
         }
@@ -116,6 +127,9 @@ namespace LABANAN
                 state.winDisplayTimerFrames = reader.ReadInt32();
                 state.roundStartTimer = reader.ReadInt32();
                 state.postWinPause = reader.ReadInt32();
+                state.preWinPause = reader.ReadInt32();
+                state.preWinCaller = reader.ReadInt32();
+                state.wasDraw = reader.ReadBoolean();
                 return state;
             }
         }

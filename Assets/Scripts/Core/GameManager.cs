@@ -32,6 +32,7 @@ namespace LABANAN
         private const int WIN_DISPLAY_DURATION = 72;
         private const int ROUND_START_DURATION = 210; // 3.5s pwesto lock
         private const int POST_WIN_PAUSE = 120; // 2s after win display before next round
+        private const int PRE_WIN_PAUSE = 120; // 2s pause after death before win display
 
         private void Awake()
         {
@@ -88,6 +89,27 @@ namespace LABANAN
 
             if (currentState.isPaused)
             {
+                currentState.frame++;
+                return;
+            }
+
+            if (currentState.preWinPause > 0)
+            {
+                currentState.preWinPause--;
+                if (currentState.preWinPause <= 0)
+                {
+                    if (currentState.wasDraw)
+                    {
+                        currentState.showRedWin = true;
+                        currentState.showBlueWin = true;
+                        currentState.winDisplayTimerFrames = WIN_DISPLAY_DURATION;
+                        if (AudioManager.Instance != null) AudioManager.Instance.PlayDraw();
+                    }
+                    else
+                    {
+                        DeclareWinner(currentState.preWinCaller);
+                    }
+                }
                 currentState.frame++;
                 return;
             }
@@ -293,18 +315,19 @@ namespace LABANAN
 
             if (p1Dead && p2Dead)
             {
-                currentState.showRedWin = true;
-                currentState.showBlueWin = true;
-                currentState.winDisplayTimerFrames = WIN_DISPLAY_DURATION;
-                if (AudioManager.Instance != null) AudioManager.Instance.PlayDraw();
+                currentState.wasDraw = true;
+                currentState.preWinPause = PRE_WIN_PAUSE;
+                currentState.preWinCaller = 0; // 0 = draw
             }
             else if (p1Dead)
             {
-                DeclareWinner(2);
+                currentState.preWinPause = PRE_WIN_PAUSE;
+                currentState.preWinCaller = 2; // P2 wins
             }
             else if (p2Dead)
             {
-                DeclareWinner(1);
+                currentState.preWinPause = PRE_WIN_PAUSE;
+                currentState.preWinCaller = 1; // P1 wins
             }
         }
 
