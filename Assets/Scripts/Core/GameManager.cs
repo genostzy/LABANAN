@@ -98,6 +98,8 @@ namespace LABANAN
                 {
                     currentState.showBlueWin = false;
                     currentState.showRedWin = false;
+                    if (!currentState.isGameOver)
+                        ResetRound();
                 }
                 currentState.frame++;
                 return;
@@ -281,7 +283,9 @@ namespace LABANAN
 
             if (p1Dead && p2Dead)
             {
-                ResetRound();
+                currentState.showRedWin = true;
+                currentState.showBlueWin = true;
+                currentState.winDisplayTimerFrames = WIN_DISPLAY_DURATION;
                 if (AudioManager.Instance != null) AudioManager.Instance.PlayDraw();
             }
             else if (p1Dead)
@@ -311,10 +315,6 @@ namespace LABANAN
             if (currentState.player1Wins >= winsNeeded || currentState.player2Wins >= winsNeeded)
             {
                 currentState.isGameOver = true;
-            }
-            else
-            {
-                ResetRound();
             }
         }
 
