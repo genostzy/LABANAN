@@ -94,6 +94,7 @@ namespace LABANAN
         public void PlayHurt() => PlaySFX(hurtClip);
         public void PlayJump() => PlaySFX(jumpClip);
         public void PlayLaban() => PlaySFX(labanClip);
+        public void PlayPwesto() => PlaySFX(pwestoClip);
         public void PlayRedWin() => PlaySFX(panaloPulaClip);
         public void PlayDraw() => PlaySFX(walangPanaloClip);
 

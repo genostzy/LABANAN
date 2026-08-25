@@ -623,7 +623,20 @@ namespace LABANAN
                 float orthoSize = baseOrtho + Mathf.Abs(playerY - baseCamY) * 0.5f;
                 orthoSize = Mathf.Clamp(orthoSize, 3f, 8f);
 
-                mainCam.transform.position = new Vector3(player1Sprite.transform.position.x, camY, -10f);
+                float camX = player1Sprite.transform.position.x;
+
+                if (state.roundStartTimer > 0)
+                {
+                    float progress = 1f - (float)state.roundStartTimer / 90f;
+                    float zoomOrtho = Mathf.Lerp(3.5f, 2f, Mathf.Min(progress * 3f, 1f));
+                    float midX = (FixedMath.ToFloat(state.player1.x) + FixedMath.ToFloat(state.player2.x)) * 0.5f;
+                    float midY = (FixedMath.ToFloat(state.player1.y) + FixedMath.ToFloat(state.player2.y)) * 0.5f + 0.5f;
+                    camX = midX;
+                    camY = midY;
+                    orthoSize = zoomOrtho;
+                }
+
+                mainCam.transform.position = new Vector3(camX, camY, -10f);
                 mainCam.orthographicSize = orthoSize;
             }
 

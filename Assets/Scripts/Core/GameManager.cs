@@ -30,6 +30,7 @@ namespace LABANAN
         private const int FRAMES_PER_SECOND = 60;
         private const int LABAN_DURATION = 120;
         private const int WIN_DISPLAY_DURATION = 72;
+        private const int ROUND_START_DURATION = 90; // 1.5s pwesto lock
 
         private void Awake()
         {
@@ -46,13 +47,17 @@ namespace LABANAN
         public void StartGame()
         {
             currentState = GameState.CreateDefault();
+            currentState.roundStartTimer = ROUND_START_DURATION;
             gameRunning = true;
 
             if (NetworkManager.Instance != null)
                 NetworkManager.Instance.SetGameManager(this);
 
             if (AudioManager.Instance != null)
+            {
                 AudioManager.Instance.PlayBGM();
+                AudioManager.Instance.PlayPwesto();
+            }
         }
 
         public void Tick(InputData p1Input, InputData p2Input)
@@ -71,6 +76,13 @@ namespace LABANAN
                 {
                     currentState.showLaban = false;
                 }
+                currentState.frame++;
+                return;
+            }
+
+            if (currentState.roundStartTimer > 0)
+            {
+                currentState.roundStartTimer--;
                 currentState.frame++;
                 return;
             }
@@ -101,8 +113,16 @@ namespace LABANAN
 
             UpdateTimer();
 
+            int prevP1YVel = currentState.player1.yVelocity;
+            int prevP2YVel = currentState.player2.yVelocity;
+
             currentState.player1 = PlayerController.Update(currentState.player1, p1Input, platforms);
             currentState.player2 = PlayerController.Update(currentState.player2, p2Input, platforms);
+
+            if (currentState.player1.yVelocity > 0 && prevP1YVel <= 0 && AudioManager.Instance != null)
+                AudioManager.Instance.PlayJump();
+            if (currentState.player2.yVelocity > 0 && prevP2YVel <= 0 && AudioManager.Instance != null)
+                AudioManager.Instance.PlayJump();
 
             CheckCombat();
 
@@ -138,6 +158,9 @@ namespace LABANAN
             var p1Hit = PlayerController.CheckAttackCollisions(
                 currentState.player1, currentState.player2);
 
+            bool p1Attacking = currentState.player1.attacking || currentState.player1.sungkit || currentState.player1.launch;
+            bool p1JustStarted = currentState.player1.attackStartupFrames == PlayerController.ATTACK_STARTUP;
+
             if (p1Hit.damage > 0)
             {
                 currentState.player2.health -= p1Hit.damage;
@@ -147,10 +170,7 @@ namespace LABANAN
 
                 if (AudioManager.Instance != null)
                 {
-                    if (p1Hit.isSungkit || p1Hit.attackType == 2)
-                        AudioManager.Instance.PlayAttack2();
-                    else
-                        AudioManager.Instance.PlayAttack1();
+                    AudioManager.Instance.PlayAttack2();
                     AudioManager.Instance.PlayHurt();
                 }
 
@@ -159,6 +179,10 @@ namespace LABANAN
                     currentState.player2.slowTimer = PlayerController.SUNGKIT_SLOW_DURATION;
                     Debug.Log($"[DEBUFF] P2 slowed for {PlayerController.SUNGKIT_SLOW_DURATION} frames");
                 }
+            }
+            else if (p1JustStarted && p1Attacking && AudioManager.Instance != null)
+            {
+                AudioManager.Instance.PlayAttack1();
             }
 
             if (p1Hit.knockbackDefender)
@@ -187,6 +211,9 @@ namespace LABANAN
             var p2Hit = PlayerController.CheckAttackCollisions(
                 currentState.player2, currentState.player1);
 
+            bool p2Attacking = currentState.player2.attacking || currentState.player2.sungkit || currentState.player2.launch;
+            bool p2JustStarted = currentState.player2.attackStartupFrames == PlayerController.ATTACK_STARTUP;
+
             if (p2Hit.damage > 0)
             {
                 currentState.player1.health -= p2Hit.damage;
@@ -196,10 +223,7 @@ namespace LABANAN
 
                 if (AudioManager.Instance != null)
                 {
-                    if (p2Hit.isSungkit || p2Hit.attackType == 2)
-                        AudioManager.Instance.PlayAttack2();
-                    else
-                        AudioManager.Instance.PlayAttack1();
+                    AudioManager.Instance.PlayAttack2();
                     AudioManager.Instance.PlayHurt();
                 }
 
@@ -208,6 +232,10 @@ namespace LABANAN
                     currentState.player1.slowTimer = PlayerController.SUNGKIT_SLOW_DURATION;
                     Debug.Log($"[DEBUFF] P1 slowed for {PlayerController.SUNGKIT_SLOW_DURATION} frames");
                 }
+            }
+            else if (p2JustStarted && p2Attacking && AudioManager.Instance != null)
+            {
+                AudioManager.Instance.PlayAttack1();
             }
 
             if (p2Hit.knockbackDefender)
@@ -315,10 +343,11 @@ namespace LABANAN
             currentState.winDisplayTimerFrames = 0;
             currentState.showLaban = false;
             currentState.labanTimerFrames = 0;
+            currentState.roundStartTimer = ROUND_START_DURATION;
 
             if (AudioManager.Instance != null)
             {
-                AudioManager.Instance.PlayLaban();
+                AudioManager.Instance.PlayPwesto();
                 if (currentState.round >= 3)
                     AudioManager.Instance.PlayLevel2();
             }
