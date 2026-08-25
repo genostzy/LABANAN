@@ -149,9 +149,9 @@ namespace LABANAN
         {
             var platTex = Resources.Load<Texture2D>("Sprites/PLATFORM");
 
-            CreatePlatformVisual("PlatformVisuals", new Vector3(9f, 0.25f, 3), 12f, 0.5f, platTex, new Color(0.3f, 0.35f, 0.3f));
-            CreatePlatformVisual("LeftPlatformVisual", new Vector3(3f, 3.25f, 3), 3f, 0.5f, platTex, new Color(0.35f, 0.3f, 0.3f));
-            CreatePlatformVisual("RightPlatformVisual", new Vector3(15f, 3.25f, 3), 3f, 0.5f, platTex, new Color(0.3f, 0.3f, 0.35f));
+            CreatePlatformVisual("PlatformVisuals", new Vector3(9f, 0.25f, 3), 12f, 1.5f, platTex, new Color(0.3f, 0.35f, 0.3f));
+            CreatePlatformVisual("LeftPlatformVisual", new Vector3(3f, 3.25f, 3), 3f, 1.5f, platTex, new Color(0.35f, 0.3f, 0.3f));
+            CreatePlatformVisual("RightPlatformVisual", new Vector3(15f, 3.25f, 3), 3f, 1.5f, platTex, new Color(0.3f, 0.3f, 0.35f));
 
             HidePlatformObject("MainPlatform");
             HidePlatformObject("LeftPlatform");
@@ -163,7 +163,6 @@ namespace LABANAN
             var obj = new GameObject(name);
             var sr = obj.AddComponent<SpriteRenderer>();
             sr.sortingOrder = 1;
-            sr.color = color;
             obj.transform.position = pos;
 
             if (tex != null)
@@ -176,6 +175,8 @@ namespace LABANAN
                 sr.sprite = whiteSprite;
                 obj.transform.localScale = new Vector3(width, height, 1f);
             }
+
+            sr.color = color;
         }
 
         private void HidePlatformObject(string name)
