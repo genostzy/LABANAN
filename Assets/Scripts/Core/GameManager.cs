@@ -211,7 +211,7 @@ namespace LABANAN
 
                 Debug.Log($"[COMBAT] P1 hit P2 for {p1Hit.damage} (type={p1Hit.attackType})");
 
-                if (p1Hit.attackType == "launch")
+                if (p1Hit.attackType == 3)
                     hitStopFrames = HIT_STOP_HEAVY;
                 else
                     hitStopFrames = HIT_STOP_LIGHT;
@@ -269,7 +269,7 @@ namespace LABANAN
 
                 Debug.Log($"[COMBAT] P2 hit P1 for {p2Hit.damage} (type={p2Hit.attackType})");
 
-                if (p2Hit.attackType == "launch")
+                if (p2Hit.attackType == 3)
                     hitStopFrames = HIT_STOP_HEAVY;
                 else
                     hitStopFrames = HIT_STOP_LIGHT;
