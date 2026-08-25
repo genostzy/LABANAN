@@ -75,6 +75,42 @@ namespace LABANAN
             return copy;
         }
 
+        public uint ComputeChecksum()
+        {
+            unchecked
+            {
+                uint hash = 2166136261;
+                hash = (hash ^ (uint)frame) * 16777619;
+                hash = (hash ^ (uint)player1.x) * 16777619;
+                hash = (hash ^ (uint)player1.y) * 16777619;
+                hash = (hash ^ (uint)player1.health) * 16777619;
+                hash = (hash ^ (uint)player1.stamina) * 16777619;
+                hash = (hash ^ (uint)player1.speed) * 16777619;
+                hash = (hash ^ (uint)player1.yVelocity) * 16777619;
+                hash = (hash ^ (uint)(player1.isOnGround ? 1 : 0)) * 16777619;
+                hash = (hash ^ (uint)(player1.attacking ? 1 : 0)) * 16777619;
+                hash = (hash ^ (uint)(player1.sungkit ? 1 : 0)) * 16777619;
+                hash = (hash ^ (uint)(player1.launch ? 1 : 0)) * 16777619;
+                hash = (hash ^ (uint)(player1.blocking ? 1 : 0)) * 16777619;
+                hash = (hash ^ (uint)player2.x) * 16777619;
+                hash = (hash ^ (uint)player2.y) * 16777619;
+                hash = (hash ^ (uint)player2.health) * 16777619;
+                hash = (hash ^ (uint)player2.stamina) * 16777619;
+                hash = (hash ^ (uint)player2.speed) * 16777619;
+                hash = (hash ^ (uint)player2.yVelocity) * 16777619;
+                hash = (hash ^ (uint)(player2.isOnGround ? 1 : 0)) * 16777619;
+                hash = (hash ^ (uint)(player2.attacking ? 1 : 0)) * 16777619;
+                hash = (hash ^ (uint)(player2.sungkit ? 1 : 0)) * 16777619;
+                hash = (hash ^ (uint)(player2.launch ? 1 : 0)) * 16777619;
+                hash = (hash ^ (uint)(player2.blocking ? 1 : 0)) * 16777619;
+                hash = (hash ^ (uint)round) * 16777619;
+                hash = (hash ^ (uint)player1Wins) * 16777619;
+                hash = (hash ^ (uint)player2Wins) * 16777619;
+                hash = (hash ^ (uint)timer) * 16777619;
+                return hash;
+            }
+        }
+
         public byte[] Serialize()
         {
             using (var ms = new System.IO.MemoryStream())

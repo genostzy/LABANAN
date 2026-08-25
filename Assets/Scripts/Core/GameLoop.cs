@@ -18,6 +18,8 @@ namespace LABANAN
         private InputData remoteInput;
         private bool debugTogglePressed;
         private InputData bufferedInput;
+        private InputData[] localInputBuffer = new InputData[256];
+        private InputData[] remoteInputBuffer = new InputData[256];
 
         private SpriteRenderer player1Sprite;
         private SpriteRenderer player2Sprite;
@@ -58,6 +60,14 @@ namespace LABANAN
 
         private int prevTimer = 60;
 
+        // Connection UI
+        private bool showConnectionUI = true;
+        private bool showDisconnectedMsg;
+        private float disconnectedTimer;
+        private string ipInput = "127.0.0.1";
+        private GameObject connectionUIRoot;
+        private GameObject hudRoot;
+
         private void Start()
         {
             tickInterval = 1f / targetTickRate;
@@ -65,7 +75,7 @@ namespace LABANAN
             if (mainCam != null)
             {
                 mainCam.clearFlags = CameraClearFlags.SolidColor;
-                mainCam.backgroundColor = new Color(0.05f, 0.05f, 0.12f);
+                mainCam.backgroundColor = Color.black;
             }
 
             if (whiteSprite == null)
@@ -82,6 +92,7 @@ namespace LABANAN
             SetupBackground();
             SetupPlatforms();
             SetupUI();
+            SetupConnectionUI();
             Debug.Log("GameLoop.Start() complete");
         }
 
@@ -202,6 +213,8 @@ namespace LABANAN
         private void SetupUI()
         {
             canvasObj = new GameObject("HUD_Canvas");
+            hudRoot = canvasObj;
+            hudRoot.SetActive(false);
             var canvas = canvasObj.AddComponent<Canvas>();
             canvas.renderMode = RenderMode.ScreenSpaceOverlay;
             var scaler = canvasObj.AddComponent<CanvasScaler>();
@@ -400,6 +413,159 @@ namespace LABANAN
         }
 
         // ──────────────────────────────────────────────
+        //  CONNECTION UI
+        // ──────────────────────────────────────────────
+
+        private void SetupConnectionUI()
+        {
+            connectionUIRoot = new GameObject("ConnectionUI");
+            var uiCanvas = connectionUIRoot.AddComponent<Canvas>();
+            uiCanvas.renderMode = RenderMode.ScreenSpaceOverlay;
+            uiCanvas.sortingOrder = 100;
+            connectionUIRoot.AddComponent<CanvasScaler>();
+            connectionUIRoot.AddComponent<GraphicRaycaster>();
+
+            var font = GetFont();
+
+            CreateText(connectionUIRoot.transform, "Title", "LABANAN", 72, TextAnchor.MiddleCenter,
+                new Vector2(0.2f, 0.65f), new Vector2(0.8f, 0.85f), Color.white, font);
+
+            CreateText(connectionUIRoot.transform, "Subtitle", "ONLINE FIGHTING", 24, TextAnchor.MiddleCenter,
+                new Vector2(0.2f, 0.55f), new Vector2(0.8f, 0.65f), new Color(0.6f, 0.6f, 0.6f), font);
+
+            var ipLabel = CreateText(connectionUIRoot.transform, "IPLabel", "HOST IP:", 20, TextAnchor.MiddleRight,
+                new Vector2(0.30f, 0.42f), new Vector2(0.42f, 0.47f), Color.white, font);
+
+            var ipFieldObj = new GameObject("IPInputField");
+            ipFieldObj.transform.SetParent(connectionUIRoot.transform, false);
+            var ipRt = ipFieldObj.AddComponent<RectTransform>();
+            ipRt.anchorMin = new Vector2(0.43f, 0.42f);
+            ipRt.anchorMax = new Vector2(0.60f, 0.47f);
+            ipRt.offsetMin = Vector2.zero;
+            ipRt.offsetMax = Vector2.zero;
+            var ipBg = ipFieldObj.AddComponent<Image>();
+            ipBg.color = new Color(0.15f, 0.15f, 0.15f);
+            var ipField = ipFieldObj.AddComponent<InputField>();
+            var ipTextObj = new GameObject("Text");
+            ipTextObj.transform.SetParent(ipFieldObj.transform, false);
+            var ipTextRt = ipTextObj.AddComponent<RectTransform>();
+            ipTextRt.anchorMin = Vector2.zero;
+            ipTextRt.anchorMax = Vector2.one;
+            ipTextRt.offsetMin = new Vector2(8, 0);
+            ipTextRt.offsetMax = new Vector2(-8, 0);
+            var ipText = ipTextObj.AddComponent<Text>();
+            ipText.font = font;
+            ipText.fontSize = 20;
+            ipText.color = Color.white;
+            ipText.supportRichText = false;
+            ipText.alignment = TextAnchor.MiddleLeft;
+            ipText.text = ipInput;
+            var ipPlaceholder = new GameObject("Placeholder");
+            ipPlaceholder.transform.SetParent(ipFieldObj.transform, false);
+            var phRt = ipPlaceholder.AddComponent<RectTransform>();
+            phRt.anchorMin = Vector2.zero;
+            phRt.anchorMax = Vector2.one;
+            phRt.offsetMin = new Vector2(8, 0);
+            phRt.offsetMax = new Vector2(-8, 0);
+            var phText = ipPlaceholder.AddComponent<Text>();
+            phText.font = font;
+            phText.fontSize = 20;
+            phText.fontStyle = FontStyle.Italic;
+            phText.color = new Color(0.5f, 0.5f, 0.5f);
+            phText.alignment = TextAnchor.MiddleLeft;
+            phText.text = "Enter IP...";
+            ipField.textComponent = ipText;
+            ipField.placeholder = phText;
+            ipField.text = ipInput;
+            ipField.onValueChanged.AddListener((val) => ipInput = val);
+
+            CreateButton(connectionUIRoot.transform, "HostBtn", "HOST", 28,
+                new Vector2(0.30f, 0.28f), new Vector2(0.45f, 0.34f), font, () =>
+                {
+                    if (NetworkManager.Instance != null)
+                    {
+                        NetworkManager.Instance.Host();
+                        OnConnectedToGame();
+                    }
+                });
+
+            CreateButton(connectionUIRoot.transform, "JoinBtn", "JOIN", 28,
+                new Vector2(0.55f, 0.28f), new Vector2(0.70f, 0.34f), font, () =>
+                {
+                    if (NetworkManager.Instance != null && !string.IsNullOrEmpty(ipInput))
+                    {
+                        NetworkManager.Instance.Join(ipInput);
+                    }
+                });
+
+            CreateButton(connectionUIRoot.transform, "LocalBtn", "LOCAL", 28,
+                new Vector2(0.40f, 0.18f), new Vector2(0.60f, 0.24f), font, () =>
+                {
+                    OnConnectedToGame();
+                });
+
+            CreateText(connectionUIRoot.transform, "StatusText", "", 20, TextAnchor.MiddleCenter,
+                new Vector2(0.2f, 0.10f), new Vector2(0.8f, 0.15f), Color.yellow, font);
+
+            if (NetworkManager.Instance != null)
+            {
+                NetworkManager.Instance.OnConnected += OnConnectedToGame;
+                NetworkManager.Instance.OnDisconnected += OnDisconnectedFromGame;
+            }
+        }
+
+        private void CreateButton(Transform parent, string name, string label, int fontSize,
+            Vector2 anchorMin, Vector2 anchorMax, Font font, UnityEngine.Events.UnityAction onClick)
+        {
+            var obj = new GameObject(name);
+            obj.transform.SetParent(parent, false);
+            var rt = obj.AddComponent<RectTransform>();
+            rt.anchorMin = anchorMin;
+            rt.anchorMax = anchorMax;
+            rt.offsetMin = Vector2.zero;
+            rt.offsetMax = Vector2.zero;
+            var img = obj.AddComponent<Image>();
+            img.color = new Color(0.2f, 0.2f, 0.2f);
+            var btn = obj.AddComponent<Button>();
+            btn.targetGraphic = img;
+            btn.onClick.AddListener(onClick);
+
+            var colors = btn.colors;
+            colors.normalColor = new Color(0.2f, 0.2f, 0.2f);
+            colors.highlightedColor = new Color(0.35f, 0.35f, 0.35f);
+            colors.pressedColor = new Color(0.15f, 0.15f, 0.15f);
+            btn.colors = colors;
+
+            CreateText(obj.transform, "Label", label, fontSize, TextAnchor.MiddleCenter,
+                Vector2.zero, Vector2.one, Color.white, font);
+        }
+
+        private void OnConnectedToGame()
+        {
+            showConnectionUI = false;
+            if (connectionUIRoot != null) connectionUIRoot.SetActive(false);
+            if (hudRoot != null) hudRoot.SetActive(true);
+            gameStarted = true;
+            if (GameManager.Instance != null)
+            {
+                GameManager.Instance.StartGame();
+            }
+            if (AudioManager.Instance != null)
+                AudioManager.Instance.PlayBGM();
+            Debug.Log("Game started from connection!");
+        }
+
+        private void OnDisconnectedFromGame()
+        {
+            showDisconnectedMsg = true;
+            disconnectedTimer = 3f;
+            showConnectionUI = true;
+            gameStarted = false;
+            if (connectionUIRoot != null) connectionUIRoot.SetActive(true);
+            if (hudRoot != null) hudRoot.SetActive(false);
+        }
+
+        // ──────────────────────────────────────────────
         //  LOOPS
         // ──────────────────────────────────────────────
 
@@ -407,19 +573,27 @@ namespace LABANAN
         {
             UnityMainThread.Update();
 
-            if (!gameStarted)
+            if (showConnectionUI)
             {
-                if (GameManager.Instance != null)
+                if (showDisconnectedMsg)
                 {
-                    GameManager.Instance.StartGame();
-                    gameStarted = true;
-                    Debug.Log("Game started!");
-
-                    if (AudioManager.Instance != null)
-                        AudioManager.Instance.PlayBGM();
+                    disconnectedTimer -= Time.deltaTime;
+                    if (disconnectedTimer <= 0)
+                        showDisconnectedMsg = false;
                 }
+
+                if (NetworkManager.Instance != null &&
+                    NetworkManager.Instance.State == NetworkManager.ConnectionState.Connecting)
+                {
+                    var statusText = connectionUIRoot?.transform.Find("StatusText")?.GetComponent<Text>();
+                    if (statusText != null)
+                        statusText.text = "Waiting for opponent...";
+                }
+
                 return;
             }
+
+            if (!gameStarted) return;
 
             if (Input.GetKeyDown(KeyCode.J))
                 bufferedInput.buttons |= InputData.ATTACK;
@@ -464,6 +638,26 @@ namespace LABANAN
                 Debug.Log("Round reset!");
             }
 
+            if (Input.GetKeyDown(KeyCode.Escape))
+            {
+                if (NetworkManager.Instance != null &&
+                    NetworkManager.Instance.State == NetworkManager.ConnectionState.Connected)
+                {
+                    NetworkManager.Instance.Disconnect();
+                }
+                else
+                {
+                    OnDisconnectedFromGame();
+                }
+            }
+
+            if (NetworkManager.Instance != null &&
+                NetworkManager.Instance.State == NetworkManager.ConnectionState.Disconnected &&
+                gameStarted)
+            {
+                OnDisconnectedFromGame();
+            }
+
             UpdateVisuals();
         }
 
@@ -497,12 +691,15 @@ namespace LABANAN
             if (NetworkManager.Instance != null &&
                 NetworkManager.Instance.State == NetworkManager.ConnectionState.Connected)
             {
+                localInputBuffer[currentFrame % 256] = localInput;
                 NetworkManager.Instance.RecordLocalInput(currentFrame, localInput);
-                NetworkManager.Instance.SendInputs(currentFrame);
+                uint checksum = GameManager.Instance.currentState.ComputeChecksum();
+                NetworkManager.Instance.SendInputs(currentFrame, checksum);
                 HandleRollback();
             }
             else
             {
+                localInputBuffer[currentFrame % 256] = localInput;
                 remoteInput = InputData.Create(currentFrame);
             }
 
@@ -514,7 +711,10 @@ namespace LABANAN
 
                 if (NetworkManager.Instance != null &&
                     NetworkManager.Instance.State == NetworkManager.ConnectionState.Connected)
+                {
                     NetworkManager.Instance.GetRemoteInput(currentFrame, out remoteInput);
+                    remoteInputBuffer[currentFrame % 256] = remoteInput;
+                }
 
                 GameManager.Instance?.Tick(localInput, remoteInput);
                 currentFrame++;
@@ -707,10 +907,12 @@ namespace LABANAN
                     GameManager.Instance.LoadState(rollbackState);
                     for (int f = rollbackFrame; f < currentFrame; f++)
                     {
-                        NetworkManager.Instance.GetRemoteInput(f, out InputData p1In);
-                        NetworkManager.Instance.GetRemoteInput(f, out InputData p2In);
-                        InputData local = (NetworkManager.Instance.IsHost) ? p1In : p2In;
-                        InputData remote = (NetworkManager.Instance.IsHost) ? p2In : p1In;
+                        InputData local = NetworkManager.Instance.IsHost
+                            ? localInputBuffer[f % 256]
+                            : remoteInputBuffer[f % 256];
+                        InputData remote = NetworkManager.Instance.IsHost
+                            ? remoteInputBuffer[f % 256]
+                            : localInputBuffer[f % 256];
                         GameManager.Instance.Tick(local, remote);
                     }
                     NetworkManager.Instance.NotifyRollback(currentFrame - rollbackFrame);
@@ -724,6 +926,19 @@ namespace LABANAN
 
         private void OnGUI()
         {
+            if (showDisconnectedMsg && showConnectionUI)
+            {
+                var style = new GUIStyle(GUI.skin.label);
+                style.fontSize = 48;
+                style.alignment = TextAnchor.MiddleCenter;
+                style.normal.textColor = Color.red;
+                GUI.Label(new Rect(0, Screen.height * 0.4f, Screen.width, 60),
+                    "OPPONENT DISCONNECTED", style);
+                return;
+            }
+
+            if (showConnectionUI) return;
+
             if (!showDebugInfo) return;
 
             int y = 10;
@@ -731,6 +946,15 @@ namespace LABANAN
 
             GUI.Label(new Rect(10, y, 500, lh), $"Frame: {currentFrame}  Focused: {Application.isFocused}");
             y += lh;
+
+            if (NetworkManager.Instance != null &&
+                NetworkManager.Instance.State == NetworkManager.ConnectionState.Connected)
+            {
+                GUI.Label(new Rect(10, y, 500, lh), $"Ping: {NetworkManager.Instance.PingMs}ms  Rollback: {NetworkManager.Instance.Rollback.HistorySize} states  HitStop: {GameManager.Instance?.hitStopFrames ?? 0}");
+                y += lh;
+                GUI.Label(new Rect(10, y, 500, lh), $"Local Checksum: {GameManager.Instance?.currentState.ComputeChecksum() ?? 0:X8}  Remote: {NetworkManager.Instance.LastRemoteChecksum:X8}");
+                y += lh;
+            }
 
             if (GameManager.Instance != null)
             {

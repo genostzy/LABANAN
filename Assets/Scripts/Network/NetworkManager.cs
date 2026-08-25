@@ -44,6 +44,16 @@ namespace LABANAN
         private bool[] remoteInputReceived = new bool[256];
         private int latestRemoteFrame = -1;
 
+        public InputData[] LocalInputBuffer => localInputBuffer;
+        public InputData[] RemoteInputBuffer => remoteInputBuffer;
+
+        // Checksum sync
+        private uint lastLocalChecksum;
+        private uint lastRemoteChecksum;
+        public uint LastLocalChecksum => lastLocalChecksum;
+        public uint LastRemoteChecksum => lastRemoteChecksum;
+        public bool ChecksumMismatch { get; private set; }
+
         // Ping measurement
         private long lastPingSendTime;
         private int pingInterval = 30; // frames
@@ -181,7 +191,7 @@ namespace LABANAN
                             continue;
                         }
 
-                        // Input data: [frame(4 bytes), buttons(1 byte), checksum(1 byte)]
+                        // Input data: [frame(4 bytes), buttons(1 byte), checksum(4 bytes)]
                         if (data.Length >= 5)
                         {
                             int frame = BitConverter.ToInt32(data, 0);
@@ -196,6 +206,11 @@ namespace LABANAN
 
                             if (frame > latestRemoteFrame)
                                 latestRemoteFrame = frame;
+
+                            if (data.Length >= 9)
+                            {
+                                lastRemoteChecksum = BitConverter.ToUInt32(data, 5);
+                            }
                         }
                     }
                     else
@@ -239,9 +254,11 @@ namespace LABANAN
         /// <summary>
         /// Send all un-acknowledged inputs to peer.
         /// </summary>
-        public void SendInputs(int currentFrame)
+        public void SendInputs(int currentFrame, uint checksum)
         {
             if (remoteEndPoint == null || udpClient == null) return;
+
+            lastLocalChecksum = checksum;
 
             // Send last N frames of input for reliability
             int startFrame = Math.Max(0, currentFrame - inputBufferFrames);
@@ -249,9 +266,10 @@ namespace LABANAN
             for (int f = startFrame; f <= currentFrame; f++)
             {
                 InputData input = localInputBuffer[f % 256];
-                byte[] data = new byte[5];
+                byte[] data = new byte[9];
                 Buffer.BlockCopy(BitConverter.GetBytes(input.frame), 0, data, 0, 4);
                 data[4] = input.buttons;
+                Buffer.BlockCopy(BitConverter.GetBytes(checksum), 0, data, 5, 4);
 
                 try { udpClient.Send(data, data.Length, remoteEndPoint); }
                 catch { }

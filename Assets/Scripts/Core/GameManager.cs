@@ -20,6 +20,11 @@ namespace LABANAN
         private PlatformManager platforms = new PlatformManager();
         private bool gameRunning;
 
+        // Hit stop
+        public int hitStopFrames;
+        public const int HIT_STOP_LIGHT = 4;
+        public const int HIT_STOP_HEAVY = 8;
+
         // Spawn positions (fixed-point)
         public const int P1_SPAWN_X = 6000;
         public const int P1_SPAWN_Y = 500;
@@ -65,6 +70,13 @@ namespace LABANAN
         public void Tick(InputData p1Input, InputData p2Input)
         {
             if (!gameRunning) return;
+
+            if (hitStopFrames > 0)
+            {
+                hitStopFrames--;
+                currentState.frame++;
+                return;
+            }
 
             if (NetworkManager.Instance != null)
             {
@@ -199,6 +211,11 @@ namespace LABANAN
 
                 Debug.Log($"[COMBAT] P1 hit P2 for {p1Hit.damage} (type={p1Hit.attackType})");
 
+                if (p1Hit.attackType == "launch")
+                    hitStopFrames = HIT_STOP_HEAVY;
+                else
+                    hitStopFrames = HIT_STOP_LIGHT;
+
                 if (AudioManager.Instance != null)
                 {
                     AudioManager.Instance.PlayAttack2();
@@ -251,6 +268,11 @@ namespace LABANAN
                 if (currentState.player1.health < 0) currentState.player1.health = 0;
 
                 Debug.Log($"[COMBAT] P2 hit P1 for {p2Hit.damage} (type={p2Hit.attackType})");
+
+                if (p2Hit.attackType == "launch")
+                    hitStopFrames = HIT_STOP_HEAVY;
+                else
+                    hitStopFrames = HIT_STOP_LIGHT;
 
                 if (AudioManager.Instance != null)
                 {
