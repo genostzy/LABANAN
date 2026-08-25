@@ -63,6 +63,11 @@ namespace LABANAN
         {
             tickInterval = 1f / targetTickRate;
             mainCam = Camera.main;
+            if (mainCam != null)
+            {
+                mainCam.clearFlags = CameraClearFlags.SolidColor;
+                mainCam.backgroundColor = Color.black;
+            }
 
             if (whiteSprite == null)
             {
