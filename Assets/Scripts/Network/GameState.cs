@@ -32,6 +32,9 @@ namespace LABANAN
         // Round start lock (pwesto SFX duration)
         public int roundStartTimer;
 
+        // Post-win pause before next round
+        public int postWinPause;
+
         public static GameState CreateDefault()
         {
             return new GameState
@@ -51,7 +54,8 @@ namespace LABANAN
                 showBlueWin = false,
                 showRedWin = false,
                 winDisplayTimerFrames = 0,
-                roundStartTimer = 0
+                roundStartTimer = 0,
+                postWinPause = 0
             };
         }
 
@@ -84,6 +88,7 @@ namespace LABANAN
                 writer.Write(showRedWin);
                 writer.Write(winDisplayTimerFrames);
                 writer.Write(roundStartTimer);
+                writer.Write(postWinPause);
                 return ms.ToArray();
             }
         }
@@ -110,6 +115,7 @@ namespace LABANAN
                 state.showRedWin = reader.ReadBoolean();
                 state.winDisplayTimerFrames = reader.ReadInt32();
                 state.roundStartTimer = reader.ReadInt32();
+                state.postWinPause = reader.ReadInt32();
                 return state;
             }
         }

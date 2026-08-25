@@ -28,9 +28,10 @@ namespace LABANAN
 
         // Frame timing
         private const int FRAMES_PER_SECOND = 60;
-        private const int LABAN_DURATION = 120;
+        private const int LABAN_DURATION = 180;
         private const int WIN_DISPLAY_DURATION = 72;
-        private const int ROUND_START_DURATION = 90; // 1.5s pwesto lock
+        private const int ROUND_START_DURATION = 210; // 3.5s pwesto lock
+        private const int POST_WIN_PAUSE = 120; // 2s after win display before next round
 
         private void Awake()
         {
@@ -99,8 +100,17 @@ namespace LABANAN
                     currentState.showBlueWin = false;
                     currentState.showRedWin = false;
                     if (!currentState.isGameOver)
-                        ResetRound();
+                        currentState.postWinPause = POST_WIN_PAUSE;
                 }
+                currentState.frame++;
+                return;
+            }
+
+            if (currentState.postWinPause > 0)
+            {
+                currentState.postWinPause--;
+                if (currentState.postWinPause <= 0)
+                    ResetRound();
                 currentState.frame++;
                 return;
             }
