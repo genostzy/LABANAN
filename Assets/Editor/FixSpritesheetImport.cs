@@ -36,6 +36,7 @@ namespace LABANAN.Editor
             importer.maxTextureSize = 2048;
             importer.npotScale = TextureImporterNPOTScale.None;
             importer.textureCompression = TextureImporterCompression.Uncompressed;
+            importer.spriteMeshType = SpriteMeshType.FullRect;
             importer.SaveAndReimport();
             Debug.Log($"Fixed: {path}");
         }
