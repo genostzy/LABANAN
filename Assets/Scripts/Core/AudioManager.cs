@@ -34,7 +34,7 @@ namespace LABANAN
 
             musicSource = gameObject.AddComponent<AudioSource>();
             musicSource.loop = true;
-            musicSource.volume = 0.4f;
+            musicSource.volume = 0.2f;
 
             sfxSource = gameObject.AddComponent<AudioSource>();
             sfxSource.volume = 0.7f;

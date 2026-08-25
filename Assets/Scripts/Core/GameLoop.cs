@@ -143,16 +143,16 @@ namespace LABANAN
             else
                 platSprite = CreateSquareSprite();
 
-            CreatePlatformVisual("PlatformVisuals", new Vector3(9f, 0.25f, 3), new Vector3(12f, 0.5f, 1f), platSprite, new Color(0.3f, 0.35f, 0.3f));
-            CreatePlatformVisual("LeftPlatformVisual", new Vector3(3f, 3.25f, 3), new Vector3(3f, 0.5f, 1f), platSprite, new Color(0.35f, 0.3f, 0.3f));
-            CreatePlatformVisual("RightPlatformVisual", new Vector3(15f, 3.25f, 3), new Vector3(3f, 0.5f, 1f), platSprite, new Color(0.3f, 0.3f, 0.35f));
+            CreatePlatformVisual("PlatformVisuals", new Vector3(9f, 0.25f, 3), 12f, 0.5f, platSprite, new Color(0.3f, 0.35f, 0.3f));
+            CreatePlatformVisual("LeftPlatformVisual", new Vector3(3f, 3.25f, 3), 3f, 0.5f, platSprite, new Color(0.35f, 0.3f, 0.3f));
+            CreatePlatformVisual("RightPlatformVisual", new Vector3(15f, 3.25f, 3), 3f, 0.5f, platSprite, new Color(0.3f, 0.3f, 0.35f));
 
             HidePlatformObject("MainPlatform");
             HidePlatformObject("LeftPlatform");
             HidePlatformObject("RightPlatform");
         }
 
-        private void CreatePlatformVisual(string name, Vector3 pos, Vector3 scale, Sprite sprite, Color color)
+        private void CreatePlatformVisual(string name, Vector3 pos, float width, float height, Sprite sprite, Color color)
         {
             var obj = new GameObject(name);
             var sr = obj.AddComponent<SpriteRenderer>();
@@ -160,7 +160,16 @@ namespace LABANAN
             sr.sprite = sprite;
             sr.color = color;
             obj.transform.position = pos;
-            obj.transform.localScale = scale;
+
+            if (sprite != null && sprite.texture != whiteSprite.texture)
+            {
+                sr.drawMode = SpriteDrawMode.Tiled;
+                sr.size = new Vector2(width, height);
+            }
+            else
+            {
+                obj.transform.localScale = new Vector3(width, height, 1f);
+            }
         }
 
         private void HidePlatformObject(string name)
