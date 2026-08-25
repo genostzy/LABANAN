@@ -103,7 +103,6 @@ namespace LABANAN
                         currentState.showRedWin = true;
                         currentState.showBlueWin = true;
                         currentState.winDisplayTimerFrames = WIN_DISPLAY_DURATION;
-                        if (AudioManager.Instance != null) AudioManager.Instance.PlayDraw();
                     }
                     else
                     {

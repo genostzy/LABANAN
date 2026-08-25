@@ -16,7 +16,7 @@ namespace LABANAN
         public const int KNOCKBACK_FORCE = 80;
         public const int PARRY_KNOCKBACK_FORCE = 120;
         public const int LAUNCH_SPEED = 350;
-        public const int LAUNCH_DURATION = 10;
+        public const int LAUNCH_DURATION = 18;
 
         // ── Damage ──
         public const int MAX_HEALTH = 100;
@@ -216,7 +216,7 @@ namespace LABANAN
             state.crouching = input.HasDown;
 
             // Attacks - check stamina first
-            if (!state.attacking && !state.sungkit && !state.launch && state.actionLockFramesLeft <= 0 && !state.crouching)
+            if (!state.attacking && !state.sungkit && !state.launch && state.actionLockFramesLeft <= 0 && !state.crouching && !state.jumping && !state.falling)
             {
                 if (input.HasAttack && state.stamina >= SWORD_STAMINA_COST)
                 {

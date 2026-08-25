@@ -562,7 +562,7 @@ namespace LABANAN
                     FixedMath.ToFloat(state.player2.y), 0);
                 player2Sprite.transform.position = Vector3.Lerp(prevP2VisualPos, targetP2, 0.3f);
                 prevP2VisualPos = player2Sprite.transform.position;
-                player2Sprite.flipX = state.player2.facingLeft;
+                player2Sprite.flipX = false;
                 var sprite = GetSprite(blueSprites, blueRows, state.player2.animState, state.player2.animIndex);
                 if (sprite != null) player2Sprite.sprite = sprite;
             }
@@ -621,11 +621,6 @@ namespace LABANAN
         private void PlayCombatAudio(GameState state)
         {
             if (AudioManager.Instance == null) return;
-
-            if (state.showRedWin && !prevShowRedWin)
-                AudioManager.Instance.PlayRedWin();
-            if (state.showBlueWin && !prevShowBlueWin)
-                AudioManager.Instance.PlayDraw();
 
             if (state.timer <= 10 && state.timer > 0)
                 AudioManager.Instance.PlayTimerTick(state.timer);
