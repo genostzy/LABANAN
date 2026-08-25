@@ -65,6 +65,17 @@ namespace LABANAN
         {
             tickInterval = 1f / targetTickRate;
             mainCam = Camera.main;
+
+            if (whiteSprite == null)
+            {
+                var tex = new Texture2D(4, 4);
+                var px = new Color[16];
+                for (int i = 0; i < 16; i++) px[i] = Color.white;
+                tex.SetPixels(px);
+                tex.Apply();
+                whiteSprite = Sprite.Create(tex, new Rect(0, 0, 4, 4), new Vector2(0.5f, 0.5f), 4);
+            }
+
             LoadSprites();
             SetupBackground();
             SetupPlatforms();
