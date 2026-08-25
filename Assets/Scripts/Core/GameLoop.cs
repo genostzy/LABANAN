@@ -39,7 +39,6 @@ namespace LABANAN
         private GameObject canvasObj;
         private Text timerText;
         private Text roundText;
-        private Image labanImage;
         private Image p1HealthBar;
         private Image p2HealthBar;
         private Image p1StaminaBar;
@@ -55,7 +54,6 @@ namespace LABANAN
         private Image blueWinOverlay;
         private Image drawOverlay;
         private Image pauseOverlay;
-        private GameObject labanObj;
         private Image p1HealthFrame;
         private Image p2HealthFrame;
 
@@ -282,32 +280,6 @@ namespace LABANAN
                 new Vector2(0.02f, 0.87f), new Vector2(0.30f, 0.89f), new Color(0.8f, 0.8f, 0.8f), font);
             p2CooldownText = CreateText(canvasObj.transform, "P2Cooldown", "J:READY  K:READY  L:READY", 16, TextAnchor.MiddleRight,
                 new Vector2(0.70f, 0.87f), new Vector2(0.98f, 0.89f), new Color(0.8f, 0.8f, 0.8f), font);
-
-            // ── LABAN splash (sprite image) ──
-            labanObj = new GameObject("LabanSplash");
-            labanObj.transform.SetParent(canvasObj.transform, false);
-            var labanRt = labanObj.AddComponent<RectTransform>();
-            labanRt.anchorMin = new Vector2(0.10f, 0.20f);
-            labanRt.anchorMax = new Vector2(0.90f, 0.80f);
-            labanRt.offsetMin = Vector2.zero;
-            labanRt.offsetMax = Vector2.zero;
-            labanImage = labanObj.AddComponent<Image>();
-            labanImage.raycastTarget = false;
-
-            var labanSpriteTex = Resources.Load<Texture2D>("Sprites/LABAN");
-            if (labanSpriteTex != null)
-            {
-                labanImage.sprite = Sprite.Create(labanSpriteTex,
-                    new Rect(0, 0, labanSpriteTex.width, labanSpriteTex.height),
-                    new Vector2(0.5f, 0.5f), labanSpriteTex.width / 8);
-                labanImage.preserveAspect = true;
-            }
-            else
-            {
-                labanImage.sprite = whiteSprite;
-                labanImage.color = Color.yellow;
-            }
-            labanObj.SetActive(true);
 
             // ── Win overlays (hidden) ──
             redWinOverlay = CreateOverlaySprite("RedWin", "Sprites/RED_WIN");
@@ -565,7 +537,6 @@ namespace LABANAN
         //  VISUALS + AUDIO TRIGGERS
         // ──────────────────────────────────────────────
 
-        private bool prevShowLaban;
         private bool prevShowRedWin;
         private bool prevShowBlueWin;
 
@@ -627,13 +598,17 @@ namespace LABANAN
 
                 if (state.roundStartTimer > 0)
                 {
-                    float progress = 1f - (float)state.roundStartTimer / 90f;
-                    float zoomOrtho = Mathf.Lerp(3.5f, 2f, Mathf.Min(progress * 3f, 1f));
                     float midX = (FixedMath.ToFloat(state.player1.x) + FixedMath.ToFloat(state.player2.x)) * 0.5f;
                     float midY = (FixedMath.ToFloat(state.player1.y) + FixedMath.ToFloat(state.player2.y)) * 0.5f + 0.5f;
-                    camX = midX;
-                    camY = midY;
-                    orthoSize = zoomOrtho;
+                    camX = Mathf.Lerp(mainCam.transform.position.x, midX, 0.08f);
+                    camY = Mathf.Lerp(mainCam.transform.position.y, midY, 0.08f);
+                    orthoSize = Mathf.Lerp(mainCam.orthographicSize, 2.2f, 0.08f);
+                }
+                else
+                {
+                    camX = Mathf.Lerp(mainCam.transform.position.x, player1Sprite.transform.position.x, 0.15f);
+                    camY = Mathf.Lerp(mainCam.transform.position.y, camY, 0.15f);
+                    orthoSize = Mathf.Lerp(mainCam.orthographicSize, orthoSize, 0.15f);
                 }
 
                 mainCam.transform.position = new Vector3(camX, camY, -10f);
@@ -645,7 +620,6 @@ namespace LABANAN
 
             UpdateUI(state);
 
-            prevShowLaban = state.showLaban;
             prevShowRedWin = state.showRedWin;
             prevShowBlueWin = state.showBlueWin;
         }
@@ -653,9 +627,6 @@ namespace LABANAN
         private void PlayCombatAudio(GameState state)
         {
             if (AudioManager.Instance == null) return;
-
-            if (state.showLaban && !prevShowLaban)
-                AudioManager.Instance.PlayLaban();
 
             if (state.showRedWin && !prevShowRedWin)
                 AudioManager.Instance.PlayRedWin();
@@ -671,8 +642,7 @@ namespace LABANAN
 
         private void UpdateUI(GameState state)
         {
-            if (labanObj != null)
-                labanObj.SetActive(state.showLaban);
+
 
             if (timerText != null)
                 timerText.text = state.timer.ToString("D2");

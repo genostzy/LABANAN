@@ -169,7 +169,7 @@ namespace LABANAN
                 currentState.player1, currentState.player2);
 
             bool p1Attacking = currentState.player1.attacking || currentState.player1.sungkit || currentState.player1.launch;
-            bool p1JustStarted = currentState.player1.attackStartupFrames == PlayerController.ATTACK_STARTUP;
+            bool p1JustStarted = currentState.player1.attackStartupFrames == PlayerController.ATTACK_STARTUP - 1;
 
             if (p1Hit.damage > 0)
             {
@@ -222,7 +222,7 @@ namespace LABANAN
                 currentState.player2, currentState.player1);
 
             bool p2Attacking = currentState.player2.attacking || currentState.player2.sungkit || currentState.player2.launch;
-            bool p2JustStarted = currentState.player2.attackStartupFrames == PlayerController.ATTACK_STARTUP;
+            bool p2JustStarted = currentState.player2.attackStartupFrames == PlayerController.ATTACK_STARTUP - 1;
 
             if (p2Hit.damage > 0)
             {
