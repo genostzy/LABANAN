@@ -130,8 +130,7 @@ namespace LABANAN
             var tex = Resources.Load<Texture2D>("Sprites/BG NIGHT");
             if (tex != null)
             {
-                bgSR.sprite = Sprite.Create(tex, new Rect(0, 0, tex.width, tex.height), new Vector2(0.5f, 0.5f), tex.width / 20);
-                bgSR.color = new Color(2f, 2f, 2f);
+                bgSR.sprite = Sprite.Create(tex, new Rect(0, 0, tex.width, tex.height), new Vector2(0.5f, 0.5f), 100);
             }
             else
             {
@@ -144,7 +143,6 @@ namespace LABANAN
             }
 
             background.transform.position = new Vector3(0f, 0f, 5);
-            background.transform.localScale = Vector3.one;
         }
 
         private void SetupPlatforms()
@@ -476,8 +474,12 @@ namespace LABANAN
 
             float orthoH = mainCam.orthographicSize * 2f;
             float orthoW = orthoH * mainCam.aspect;
-            float scaleX = orthoW / bgSR.sprite.bounds.size.x;
-            float scaleY = orthoH / bgSR.sprite.bounds.size.y;
+
+            float spriteW = bgSR.sprite.bounds.size.x;
+            float spriteH = bgSR.sprite.bounds.size.y;
+
+            float scaleX = orthoW / spriteW;
+            float scaleY = orthoH / spriteH;
             float scale = Mathf.Max(scaleX, scaleY);
 
             background.transform.localScale = new Vector3(scale, scale, 1f);
