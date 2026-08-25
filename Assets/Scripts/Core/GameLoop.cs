@@ -21,6 +21,8 @@ namespace LABANAN
 
         private SpriteRenderer player1Sprite;
         private SpriteRenderer player2Sprite;
+        private Vector3 prevP1VisualPos;
+        private Vector3 prevP2VisualPos;
         private Camera mainCam;
         private GameObject background;
         private SpriteRenderer bgSR;
@@ -29,9 +31,6 @@ namespace LABANAN
         private Sprite[][] blueSprites;
         private int redRows;
         private int blueRows;
-
-        private bool debugDummyMode;
-        private bool debugAttackSpam;
 
         private static Sprite whiteSprite;
         private static Font cachedFont;
@@ -66,7 +65,7 @@ namespace LABANAN
             if (mainCam != null)
             {
                 mainCam.clearFlags = CameraClearFlags.SolidColor;
-                mainCam.backgroundColor = Color.black;
+                mainCam.backgroundColor = new Color(0.05f, 0.05f, 0.12f);
             }
 
             if (whiteSprite == null)
@@ -153,8 +152,8 @@ namespace LABANAN
             var platTex = Resources.Load<Texture2D>("Sprites/PLATFORM");
 
             CreatePlatformVisual("PlatformVisuals", new Vector3(9f, 1.1f, 5), 21f, 3f, platTex, new Color(0.3f, 0.35f, 0.3f));
-            CreatePlatformVisual("LeftPlatformVisual", new Vector3(3f, 4f, 5), 5.2f, 2f, platTex, new Color(0.35f, 0.3f, 0.3f));
-            CreatePlatformVisual("RightPlatformVisual", new Vector3(15f, 4f, 5), 5.2f, 2f, platTex, new Color(0.3f, 0.3f, 0.35f));
+            CreatePlatformVisual("LeftPlatformVisual", new Vector3(3f, 3.9f, 5), 5.2f, 2f, platTex, new Color(0.35f, 0.3f, 0.3f));
+            CreatePlatformVisual("RightPlatformVisual", new Vector3(15f, 3.9f, 5), 5.2f, 2f, platTex, new Color(0.3f, 0.3f, 0.35f));
 
             HidePlatformObject("MainPlatform");
             HidePlatformObject("LeftPlatform");
@@ -460,21 +459,11 @@ namespace LABANAN
             if (Input.GetKeyDown(KeyCode.F2) && GameManager.Instance != null)
             {
                 GameManager.Instance.ResetRound();
+                prevP1VisualPos = new Vector3(FixedMath.ToFloat(GameManager.P1_SPAWN_X), FixedMath.ToFloat(GameManager.P1_SPAWN_Y), 0);
+                prevP2VisualPos = new Vector3(FixedMath.ToFloat(GameManager.P2_SPAWN_X), FixedMath.ToFloat(GameManager.P2_SPAWN_Y), 0);
+                if (player1Sprite != null) player1Sprite.transform.position = prevP1VisualPos;
+                if (player2Sprite != null) player2Sprite.transform.position = prevP2VisualPos;
                 Debug.Log("Round reset!");
-            }
-
-            if (Input.GetKeyDown(KeyCode.F3))
-            {
-                debugDummyMode = !debugDummyMode;
-                if (debugDummyMode) debugAttackSpam = false;
-                Debug.Log($"Blue dummy: {(debugDummyMode ? "ON" : "OFF")}");
-            }
-
-            if (Input.GetKeyDown(KeyCode.F4))
-            {
-                debugAttackSpam = !debugAttackSpam;
-                if (debugAttackSpam) debugDummyMode = false;
-                Debug.Log($"Blue attack spam: {(debugAttackSpam ? "ON" : "OFF")}");
             }
 
             UpdateVisuals();
@@ -512,15 +501,7 @@ namespace LABANAN
             }
             else
             {
-                if (debugDummyMode)
-                    remoteInput = InputData.Create(currentFrame);
-                else if (debugAttackSpam)
-                {
-                    remoteInput = InputData.Create(currentFrame);
-                    remoteInput.buttons |= InputData.ATTACK;
-                }
-                else
-                    remoteInput = InputData.Create(currentFrame);
+                remoteInput = InputData.Create(currentFrame);
             }
 
             tickAccumulator += Time.fixedDeltaTime;
@@ -554,37 +535,43 @@ namespace LABANAN
             if (player1Sprite == null)
             {
                 var p1 = GameObject.Find("Player1_Red");
-                if (p1 != null) player1Sprite = p1.GetComponent<SpriteRenderer>();
+                if (p1 != null)
+                {
+                    player1Sprite = p1.GetComponent<SpriteRenderer>();
+                    prevP1VisualPos = p1.transform.position;
+                }
             }
             if (player2Sprite == null)
             {
                 var p2 = GameObject.Find("Player2_Blue");
-                if (p2 != null) player2Sprite = p2.GetComponent<SpriteRenderer>();
+                if (p2 != null)
+                {
+                    player2Sprite = p2.GetComponent<SpriteRenderer>();
+                    prevP2VisualPos = p2.transform.position;
+                }
             }
             if (mainCam == null) mainCam = Camera.main;
 
-            bool showP2 = debugDummyMode || debugAttackSpam ||
-                (NetworkManager.Instance != null && NetworkManager.Instance.State == NetworkManager.ConnectionState.Connected);
-
             if (player2Sprite != null)
             {
-                player2Sprite.enabled = showP2;
-                if (showP2)
-                {
-                    player2Sprite.transform.position = new Vector3(
-                        FixedMath.ToFloat(state.player2.x),
-                        FixedMath.ToFloat(state.player2.y), 0);
-                    player2Sprite.flipX = state.player2.facingLeft;
-                    var sprite = GetSprite(blueSprites, blueRows, state.player2.animState, state.player2.animIndex);
-                    if (sprite != null) player2Sprite.sprite = sprite;
-                }
+                player2Sprite.enabled = true;
+                Vector3 targetP2 = new Vector3(
+                    FixedMath.ToFloat(state.player2.x),
+                    FixedMath.ToFloat(state.player2.y), 0);
+                player2Sprite.transform.position = Vector3.Lerp(prevP2VisualPos, targetP2, 0.3f);
+                prevP2VisualPos = player2Sprite.transform.position;
+                player2Sprite.flipX = state.player2.facingLeft;
+                var sprite = GetSprite(blueSprites, blueRows, state.player2.animState, state.player2.animIndex);
+                if (sprite != null) player2Sprite.sprite = sprite;
             }
 
             if (player1Sprite != null)
             {
-                player1Sprite.transform.position = new Vector3(
+                Vector3 targetP1 = new Vector3(
                     FixedMath.ToFloat(state.player1.x),
                     FixedMath.ToFloat(state.player1.y), 0);
+                player1Sprite.transform.position = Vector3.Lerp(prevP1VisualPos, targetP1, 0.3f);
+                prevP1VisualPos = player1Sprite.transform.position;
                 player1Sprite.flipX = false;
                 var sprite = GetSprite(redSprites, redRows, state.player1.animState, state.player1.animIndex);
                 if (sprite != null) player1Sprite.sprite = sprite;

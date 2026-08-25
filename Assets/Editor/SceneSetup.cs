@@ -94,19 +94,12 @@ namespace LABANAN.Editor
             var camera = cam.AddComponent<Camera>();
             camera.orthographic = true;
             camera.orthographicSize = 6;
-            camera.backgroundColor = new Color(0.05f, 0.05f, 0.1f);
+            camera.backgroundColor = Color.black;
             camera.clearFlags = CameraClearFlags.SolidColor;
             cam.transform.position = new Vector3(9, 1.5f, -10);
             cam.AddComponent<AudioListener>();
 
-            // Background - will be set up at runtime by GameLoop
-            var bg = new GameObject("Background");
-            bg.transform.position = new Vector3(9f, 2.5f, 5);
-            var bgSR = bg.AddComponent<SpriteRenderer>();
-            bgSR.sortingOrder = -1;
-            bgSR.sprite = CreateSquareSprite();
-            bgSR.color = new Color(0.05f, 0.05f, 0.1f);
-            bg.transform.localScale = new Vector3(20f, 12f, 1f);
+            // Background - created at runtime by GameLoop.SetupBackground()
 
             // Managers
             var managers = new GameObject("Managers");
@@ -148,23 +141,23 @@ namespace LABANAN.Editor
             mainSR.sprite = CreateSquareSprite();
             mainPlat.transform.localScale = new Vector3(12f, 0.5f, 1f);
 
-            // Left platform: X=1.5-4.5, Y=3.0-3.5
+            // Left platform: X=0.4-5.6, Y=2.9-4.9
             var leftPlat = new GameObject("LeftPlatform");
-            leftPlat.transform.position = new Vector3(3f, 3.25f, 0);
+            leftPlat.transform.position = new Vector3(3f, 3.9f, 0);
             var leftSR = leftPlat.AddComponent<SpriteRenderer>();
             leftSR.sortingOrder = 1;
             leftSR.color = new Color(0.35f, 0.3f, 0.3f);
             leftSR.sprite = CreateSquareSprite();
-            leftPlat.transform.localScale = new Vector3(3f, 0.5f, 1f);
+            leftPlat.transform.localScale = new Vector3(5.2f, 2f, 1f);
 
-            // Right platform: X=13.5-16.5, Y=3.0-3.5
+            // Right platform: X=12.4-17.6, Y=2.9-4.9
             var rightPlat = new GameObject("RightPlatform");
-            rightPlat.transform.position = new Vector3(15f, 3.25f, 0);
+            rightPlat.transform.position = new Vector3(15f, 3.9f, 0);
             var rightSR = rightPlat.AddComponent<SpriteRenderer>();
             rightSR.sortingOrder = 1;
             rightSR.color = new Color(0.3f, 0.3f, 0.35f);
             rightSR.sprite = CreateSquareSprite();
-            rightPlat.transform.localScale = new Vector3(3f, 0.5f, 1f);
+            rightPlat.transform.localScale = new Vector3(5.2f, 2f, 1f);
 
             Debug.Log("Game scene created!");
         }

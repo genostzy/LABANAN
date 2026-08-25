@@ -21,10 +21,10 @@ namespace LABANAN
         private bool gameRunning;
 
         // Spawn positions (fixed-point)
-        private const int P1_SPAWN_X = 6000;
-        private const int P1_SPAWN_Y = 500;
-        private const int P2_SPAWN_X = 12000;
-        private const int P2_SPAWN_Y = 500;
+        public const int P1_SPAWN_X = 6000;
+        public const int P1_SPAWN_Y = 500;
+        public const int P2_SPAWN_X = 12000;
+        public const int P2_SPAWN_Y = 500;
 
         // Frame timing
         private const int FRAMES_PER_SECOND = 60;

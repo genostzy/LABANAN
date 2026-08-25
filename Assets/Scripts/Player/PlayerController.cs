@@ -205,7 +205,7 @@ namespace LABANAN
             }
 
             // Jump
-            if (input.HasUp && state.isOnGround && state.jumpCooldownLeft <= 0)
+            if (input.HasUp && state.isOnGround && state.jumpCooldownLeft <= 0 && !state.blocking)
             {
                 state.yVelocity = JUMP_FORCE;
                 state.isOnGround = false;
