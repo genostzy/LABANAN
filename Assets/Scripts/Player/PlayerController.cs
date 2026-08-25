@@ -20,26 +20,26 @@ namespace LABANAN
 
         // ── Damage ──
         public const int MAX_HEALTH = 100;
-        public const int SWORD_DAMAGE = 25;
-        public const int SUNGKIT_DAMAGE = 25;
-        public const int LAUNCH_DAMAGE = 30;
+        public const int SWORD_DAMAGE = 12;
+        public const int SUNGKIT_DAMAGE = 18;
+        public const int LAUNCH_DAMAGE = 28;
         public const int PLATFORM_DAMAGE = 500;
 
         // ── Stamina ──
         public const int MAX_STAMINA = 100;
-        public const int SWORD_STAMINA_COST = 5;
+        public const int SWORD_STAMINA_COST = 10;
         public const int SUNGKIT_STAMINA_COST = 20;
-        public const int LAUNCH_STAMINA_COST = 60;
+        public const int LAUNCH_STAMINA_COST = 35;
 
         // ── Body ──
         public const int BODY_WIDTH = 640;
         public const int BODY_HEIGHT = 1000;
 
         // ── Cooldowns (frames @ 60fps) ──
-        public const int ATTACK_COOLDOWN = 30;
+        public const int ATTACK_COOLDOWN = 20;
         public const int JUMP_COOLDOWN = 15;
-        public const int SUNGKIT_COOLDOWN = 180;
-        public const int LAUNCH_COOLDOWN = 300;
+        public const int SUNGKIT_COOLDOWN = 150;
+        public const int LAUNCH_COOLDOWN = 240;
         public const int KNOCKBACK_DURATION = 18;
         public const int ACTION_LOCK_DURATION = 2;
         public const int BLOCK_MAX_DURATION = 180;
@@ -49,7 +49,7 @@ namespace LABANAN
 
         // ── Parry ──
         public const int PARRY_WINDOW = 10;
-        public const int PARRY_HEAL = 10;
+        public const int PARRY_HEAL = 15;
 
         // ── Slow debuff ──
         public const int SUNGKIT_SLOW_DURATION = 90;
@@ -113,12 +113,12 @@ namespace LABANAN
             state.blockCooldownLeft = Max(0, state.blockCooldownLeft - 1);
             state.slowTimer = Max(0, state.slowTimer - 1);
 
-            // Stamina regen: +1 every second (60 frames)
+            // Stamina regen: +1 every 30 frames (0.5s)
             state.staminaRegenTimer++;
-            if (state.staminaRegenTimer >= 60)
+            if (state.staminaRegenTimer >= 30)
             {
                 state.staminaRegenTimer = 0;
-                state.stamina = Min(state.stamina + 1, MAX_STAMINA);
+                state.stamina = Min(state.stamina + 5, MAX_STAMINA);
             }
 
             if (state.isKnockedBack)
