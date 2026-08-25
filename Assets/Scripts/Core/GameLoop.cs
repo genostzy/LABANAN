@@ -149,7 +149,7 @@ namespace LABANAN
         {
             var platTex = Resources.Load<Texture2D>("Sprites/PLATFORM");
 
-            CreatePlatformVisual("PlatformVisuals", new Vector3(9f, 0.9f, 5), 21.5f, 3f, platTex, new Color(0.3f, 0.35f, 0.3f));
+            CreatePlatformVisual("PlatformVisuals", new Vector3(9f, 1f, 5), 21f, 3f, platTex, new Color(0.3f, 0.35f, 0.3f));
             CreatePlatformVisual("LeftPlatformVisual", new Vector3(3f, 4f, 5), 5.2f, 2f, platTex, new Color(0.35f, 0.3f, 0.3f));
             CreatePlatformVisual("RightPlatformVisual", new Vector3(15f, 4f, 5), 5.2f, 2f, platTex, new Color(0.3f, 0.3f, 0.35f));
 
@@ -647,7 +647,7 @@ namespace LABANAN
             if (state.showRedWin && !prevShowRedWin)
                 AudioManager.Instance.PlayRedWin();
             if (state.showBlueWin && !prevShowBlueWin)
-                AudioManager.Instance.PlayRedWin();
+                AudioManager.Instance.PlayDraw();
 
             if (state.timer <= 10 && state.timer > 0)
                 AudioManager.Instance.PlayTimerTick(state.timer);
