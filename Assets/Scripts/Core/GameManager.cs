@@ -76,8 +76,6 @@ namespace LABANAN
                 {
                     currentState.showLaban = false;
                 }
-                currentState.frame++;
-                return;
             }
 
             if (currentState.roundStartTimer > 0)
@@ -341,8 +339,8 @@ namespace LABANAN
             currentState.showBlueWin = false;
             currentState.showRedWin = false;
             currentState.winDisplayTimerFrames = 0;
-            currentState.showLaban = false;
-            currentState.labanTimerFrames = 0;
+            currentState.showLaban = true;
+            currentState.labanTimerFrames = LABAN_DURATION;
             currentState.roundStartTimer = ROUND_START_DURATION;
 
             if (AudioManager.Instance != null)

@@ -287,8 +287,8 @@ namespace LABANAN
             labanObj = new GameObject("LabanSplash");
             labanObj.transform.SetParent(canvasObj.transform, false);
             var labanRt = labanObj.AddComponent<RectTransform>();
-            labanRt.anchorMin = new Vector2(0.15f, 0.30f);
-            labanRt.anchorMax = new Vector2(0.85f, 0.70f);
+            labanRt.anchorMin = new Vector2(0.10f, 0.20f);
+            labanRt.anchorMax = new Vector2(0.90f, 0.80f);
             labanRt.offsetMin = Vector2.zero;
             labanRt.offsetMax = Vector2.zero;
             labanImage = labanObj.AddComponent<Image>();
