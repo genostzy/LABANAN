@@ -19,6 +19,7 @@ namespace LABANAN
         private bool debugTogglePressed;
         private InputData bufferedInput;
         private InputData bufferedInput2; // couch multiplayer: player 2's buffered attack presses
+        private bool isLocalGame;
 
         private SpriteRenderer player1Sprite;
         private SpriteRenderer player2Sprite;
@@ -538,6 +539,7 @@ namespace LABANAN
             CreateButton(connectionUIRoot.transform, "LocalBtn", "LOCAL", 28,
                 new Vector2(0.40f, 0.18f), new Vector2(0.60f, 0.24f), font, () =>
                 {
+                    isLocalGame = true;
                     OnConnectedToGame();
                 });
 
@@ -713,7 +715,7 @@ namespace LABANAN
                 }
             }
 
-            if (NetworkManager.Instance != null &&
+            if (!isLocalGame && NetworkManager.Instance != null &&
                 NetworkManager.Instance.State == NetworkManager.ConnectionState.Disconnected &&
                 gameStarted)
             {
