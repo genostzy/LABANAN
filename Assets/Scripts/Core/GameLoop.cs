@@ -58,6 +58,11 @@ namespace LABANAN
         private Image p1HealthFrame;
         private Image p2HealthFrame;
 
+        private Image gameOverRedWinsOverlay;
+        private Image gameOverBlueWinsOverlay;
+        private Image gameOverDrawOverlay;
+        private bool prevIsGameOver;
+
         private int prevTimer = 60;
 
         // Connection UI
@@ -311,6 +316,15 @@ namespace LABANAN
             // ── Pause overlay (hidden) ──
             pauseOverlay = CreateOverlaySprite("PauseOverlay", "Sprites/PAUSE");
 
+            // ── Game over overlays (hidden) ──
+            gameOverRedWinsOverlay = CreateOverlaySprite("GameOverRedWins", "Sprites/GameOver, again, exit (RED WINS)");
+            gameOverBlueWinsOverlay = CreateOverlaySprite("GameOverBlueWins", "Sprites/GameOver, again, exit (BLUE WINS)");
+            gameOverDrawOverlay = CreateOverlaySprite("GameOverDraw", "Sprites/GameOver, again, exit (DRAW)");
+
+            // ── Game Over buttons ──
+            CreateGameOverButton("AgainBtn", new Vector2(0.15f, 0.05f), new Vector2(0.45f, 0.25f), font, OnAgainClicked);
+            CreateGameOverButton("ExitBtn", new Vector2(0.55f, 0.05f), new Vector2(0.85f, 0.25f), font, OnExitClicked);
+
             // ── Win overlay texts (hidden) ──
             CreateText(canvasObj.transform, "P1WinsText", "", 28, TextAnchor.MiddleLeft,
                 new Vector2(0.02f, 0.85f), new Vector2(0.15f, 0.88f), Color.red, font);
@@ -376,6 +390,23 @@ namespace LABANAN
             img.sprite = sprite;
             img.raycastTarget = false;
             return img;
+        }
+
+        private void CreateGameOverButton(string name, Vector2 anchorMin, Vector2 anchorMax, Font font, UnityEngine.Events.UnityAction onClick)
+        {
+            var obj = new GameObject(name);
+            obj.transform.SetParent(canvasObj.transform, false);
+            var rt = obj.AddComponent<RectTransform>();
+            rt.anchorMin = anchorMin;
+            rt.anchorMax = anchorMax;
+            rt.offsetMin = Vector2.zero;
+            rt.offsetMax = Vector2.zero;
+            var img = obj.AddComponent<Image>();
+            img.color = new Color(0, 0, 0, 0);
+            var btn = obj.AddComponent<Button>();
+            btn.targetGraphic = img;
+            btn.onClick.AddListener(onClick);
+            obj.SetActive(false);
         }
 
         private static Image CreateBar(Transform parent, string name, Color color, Vector2 anchorMin, Vector2 anchorMax)
@@ -602,6 +633,38 @@ namespace LABANAN
             gameStarted = false;
             if (connectionUIRoot != null) connectionUIRoot.SetActive(true);
             if (hudRoot != null) hudRoot.SetActive(false);
+        }
+
+        private void OnAgainClicked()
+        {
+            if (GameManager.Instance != null)
+            {
+                GameManager.Instance.StartGame();
+            }
+            prevIsGameOver = false;
+            prevP1VisualPos = new Vector3(FixedMath.ToFloat(GameManager.P1_SPAWN_X), FixedMath.ToFloat(GameManager.P1_SPAWN_Y), 0);
+            prevP2VisualPos = new Vector3(FixedMath.ToFloat(GameManager.P2_SPAWN_X), FixedMath.ToFloat(GameManager.P2_SPAWN_Y), 0);
+            if (player1Sprite != null) player1Sprite.transform.position = prevP1VisualPos;
+            if (player2Sprite != null) player2Sprite.transform.position = prevP2VisualPos;
+            currentFrame = 0;
+            Debug.Log("Match restarted!");
+        }
+
+        private void OnExitClicked()
+        {
+            gameStarted = false;
+            prevIsGameOver = false;
+            showConnectionUI = true;
+            if (connectionUIRoot != null) connectionUIRoot.SetActive(true);
+            if (hudRoot != null) hudRoot.SetActive(false);
+            if (AudioManager.Instance != null)
+                AudioManager.Instance.StopMusic();
+            if (NetworkManager.Instance != null &&
+                NetworkManager.Instance.State == NetworkManager.ConnectionState.Connected)
+            {
+                NetworkManager.Instance.Disconnect();
+            }
+            Debug.Log("Returned to connection screen.");
         }
 
         // ──────────────────────────────────────────────
@@ -896,9 +959,9 @@ namespace LABANAN
         {
             if (AudioManager.Instance == null) return;
 
-            if (state.showRedWin && !prevShowRedWin)
+            if (state.showRedWin && !state.showBlueWin && !prevShowRedWin)
                 AudioManager.Instance.PlayRedWin();
-            if (state.showBlueWin && !prevShowBlueWin)
+            if (state.showRedWin && state.showBlueWin && !prevShowRedWin)
                 AudioManager.Instance.PlayDraw();
 
             if (state.timer <= 10 && state.timer > 0)
@@ -947,7 +1010,35 @@ namespace LABANAN
 
             if (redWinOverlay != null) redWinOverlay.gameObject.SetActive(state.showRedWin);
             if (blueWinOverlay != null) blueWinOverlay.gameObject.SetActive(state.showBlueWin);
+            if (drawOverlay != null) drawOverlay.gameObject.SetActive(state.showRedWin && state.showBlueWin);
             if (pauseOverlay != null) pauseOverlay.gameObject.SetActive(state.isPaused);
+
+            // Game over overlays
+            bool isGameOverNow = state.isGameOver && !state.showRedWin && !state.showBlueWin;
+            if (isGameOverNow != prevIsGameOver)
+            {
+                var gameOverBtns = new[] { "AgainBtn", "ExitBtn" };
+                foreach (var btnName in gameOverBtns)
+                {
+                    var btnObj = GameObject.Find(btnName);
+                    if (btnObj != null) btnObj.SetActive(isGameOverNow);
+                }
+            }
+            if (isGameOverNow)
+            {
+                bool redWins = state.player1Wins >= GameManager.Instance.winsNeeded;
+                bool blueWins = state.player2Wins >= GameManager.Instance.winsNeeded;
+                if (gameOverRedWinsOverlay != null) gameOverRedWinsOverlay.gameObject.SetActive(redWins);
+                if (gameOverBlueWinsOverlay != null) gameOverBlueWinsOverlay.gameObject.SetActive(blueWins);
+                if (gameOverDrawOverlay != null) gameOverDrawOverlay.gameObject.SetActive(!redWins && !blueWins);
+            }
+            else
+            {
+                if (gameOverRedWinsOverlay != null) gameOverRedWinsOverlay.gameObject.SetActive(false);
+                if (gameOverBlueWinsOverlay != null) gameOverBlueWinsOverlay.gameObject.SetActive(false);
+                if (gameOverDrawOverlay != null) gameOverDrawOverlay.gameObject.SetActive(false);
+            }
+            prevIsGameOver = isGameOverNow;
         }
 
         private static string CdStr(int frames)
