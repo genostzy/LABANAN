@@ -887,6 +887,11 @@ namespace LABANAN
         {
             if (AudioManager.Instance == null) return;
 
+            if (state.showRedWin && !prevShowRedWin)
+                AudioManager.Instance.PlayRedWin();
+            if (state.showBlueWin && !prevShowBlueWin)
+                AudioManager.Instance.PlayDraw();
+
             if (state.timer <= 10 && state.timer > 0)
                 AudioManager.Instance.PlayTimerTick(state.timer);
 
