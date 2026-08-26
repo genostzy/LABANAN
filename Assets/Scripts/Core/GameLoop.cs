@@ -301,7 +301,6 @@ namespace LABANAN
                 new Vector2(0.43f, 0.945f), new Vector2(0.57f, 0.995f), Color.white, font);
             roundText = CreateText(canvasObj.transform, "RoundText", "ROUND 1", 20, TextAnchor.MiddleCenter,
                 new Vector2(0.43f, 0.925f), new Vector2(0.57f, 0.945f), Color.white, font);
-                new Vector2(0.38f, 0.90f), new Vector2(0.62f, 0.935f), Color.white, font);
 
             // ── Cooldown indicators ──
             p1CooldownText = CreateText(canvasObj.transform, "P1Cooldown", "J:READY  K:READY  L:READY", 16, TextAnchor.MiddleLeft,
