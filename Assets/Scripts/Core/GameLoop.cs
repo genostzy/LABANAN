@@ -265,41 +265,42 @@ namespace LABANAN
             if (hbSprite != null)
             {
                 p1HealthFrame = CreateImage(canvasObj.transform, "P1HealthFrame", hbSprite,
-                    new Vector2(0.0f, 0.93f), new Vector2(0.40f, 0.97f));
+                    new Vector2(0.0f, 0.94f), new Vector2(0.40f, 0.99f));
                 p2HealthFrame = CreateImage(canvasObj.transform, "P2HealthFrame", hbSprite,
-                    new Vector2(0.60f, 0.93f), new Vector2(1.0f, 0.97f));
-                if (p1HealthFrame != null) p1HealthFrame.type = Image.Type.Simple;
-                if (p2HealthFrame != null) p2HealthFrame.type = Image.Type.Simple;
+                    new Vector2(0.60f, 0.94f), new Vector2(1.0f, 0.99f));
+                if (p1HealthFrame != null) { p1HealthFrame.type = Image.Type.Simple; p1HealthFrame.preserveAspect = true; }
+                if (p2HealthFrame != null) { p2HealthFrame.type = Image.Type.Simple; p2HealthFrame.preserveAspect = true; }
             }
 
             // ── Health bars (fill) ──
             p1HealthBar = CreateBar(canvasObj.transform, "P1HealthBar", Color.red,
-                new Vector2(0.02f, 0.935f), new Vector2(0.38f, 0.965f));
+                new Vector2(0.01f, 0.945f), new Vector2(0.39f, 0.985f));
             p2HealthBar = CreateBar(canvasObj.transform, "P2HealthBar", new Color(0, 0.5f, 1f),
-                new Vector2(0.62f, 0.935f), new Vector2(0.98f, 0.965f));
+                new Vector2(0.61f, 0.945f), new Vector2(0.99f, 0.985f));
 
             // ── Stamina bars ──
             p1StaminaBar = CreateBar(canvasObj.transform, "P1StaminaBar", new Color(0.2f, 0.8f, 0.2f),
-                new Vector2(0.02f, 0.915f), new Vector2(0.22f, 0.932f));
+                new Vector2(0.01f, 0.925f), new Vector2(0.20f, 0.942f));
             p2StaminaBar = CreateBar(canvasObj.transform, "P2StaminaBar", new Color(0.2f, 0.8f, 0.2f),
-                new Vector2(0.78f, 0.915f), new Vector2(0.98f, 0.932f));
+                new Vector2(0.80f, 0.925f), new Vector2(0.99f, 0.942f));
 
             // ── Win dots (3 per player for race to 3) ──
             for (int i = 0; i < 3; i++)
             {
-                float xMin = 0.02f + i * 0.04f;
+                float xMin = 0.01f + i * 0.035f;
                 p1WinDots[i] = CreateBar(canvasObj.transform, $"P1Dot{i}", new Color(0.3f, 0.3f, 0.3f),
-                    new Vector2(xMin, 0.895f), new Vector2(xMin + 0.03f, 0.912f));
+                    new Vector2(xMin, 0.908f), new Vector2(xMin + 0.028f, 0.922f));
 
-                float xMin2 = 0.88f + i * 0.04f;
+                float xMin2 = 0.89f + i * 0.035f;
                 p2WinDots[i] = CreateBar(canvasObj.transform, $"P2Dot{i}", new Color(0.3f, 0.3f, 0.3f),
-                    new Vector2(xMin2, 0.895f), new Vector2(xMin2 + 0.03f, 0.912f));
+                    new Vector2(xMin2, 0.908f), new Vector2(xMin2 + 0.028f, 0.922f));
             }
 
             // ── Center: Timer + Round ──
-            timerText = CreateText(canvasObj.transform, "TimerText", "60", 64, TextAnchor.MiddleCenter,
-                new Vector2(0.42f, 0.93f), new Vector2(0.58f, 0.99f), Color.white, font);
-            roundText = CreateText(canvasObj.transform, "RoundText", "ROUND 1", 28, TextAnchor.MiddleCenter,
+            timerText = CreateText(canvasObj.transform, "TimerText", "60", 48, TextAnchor.MiddleCenter,
+                new Vector2(0.43f, 0.945f), new Vector2(0.57f, 0.995f), Color.white, font);
+            roundText = CreateText(canvasObj.transform, "RoundText", "ROUND 1", 20, TextAnchor.MiddleCenter,
+                new Vector2(0.43f, 0.925f), new Vector2(0.57f, 0.945f), Color.white, font);
                 new Vector2(0.38f, 0.90f), new Vector2(0.62f, 0.935f), Color.white, font);
 
             // ── Cooldown indicators ──
@@ -321,9 +322,9 @@ namespace LABANAN
             gameOverBlueWinsOverlay = CreateOverlaySprite("GameOverBlueWins", "Sprites/GameOver, again, exit (BLUE WINS)");
             gameOverDrawOverlay = CreateOverlaySprite("GameOverDraw", "Sprites/GameOver, again, exit (DRAW)");
 
-            // ── Game Over buttons ──
-            CreateGameOverButton("AgainBtn", new Vector2(0.15f, 0.05f), new Vector2(0.45f, 0.25f), font, OnAgainClicked);
-            CreateGameOverButton("ExitBtn", new Vector2(0.55f, 0.05f), new Vector2(0.85f, 0.25f), font, OnExitClicked);
+            // ── Game Over buttons (centered, matching sprite positions) ──
+            CreateGameOverButton("AgainBtn", new Vector2(0.35f, 0.22f), new Vector2(0.65f, 0.30f), font, OnAgainClicked);
+            CreateGameOverButton("ExitBtn", new Vector2(0.35f, 0.10f), new Vector2(0.65f, 0.18f), font, OnExitClicked);
 
             // ── Win overlay texts (hidden) ──
             CreateText(canvasObj.transform, "P1WinsText", "", 28, TextAnchor.MiddleLeft,
@@ -402,7 +403,7 @@ namespace LABANAN
             rt.offsetMin = Vector2.zero;
             rt.offsetMax = Vector2.zero;
             var img = obj.AddComponent<Image>();
-            img.color = new Color(0, 0, 0, 0);
+            img.color = new Color(0, 0, 0, 0.01f);
             var btn = obj.AddComponent<Button>();
             btn.targetGraphic = img;
             btn.onClick.AddListener(onClick);
@@ -973,40 +974,64 @@ namespace LABANAN
 
         private void UpdateUI(GameState state)
         {
-
+            bool showHUD = !state.isGameOver || state.showRedWin || state.showBlueWin;
 
             if (timerText != null)
+            {
                 timerText.text = state.timer.ToString("D2");
+                timerText.gameObject.SetActive(showHUD);
+            }
 
             if (roundText != null)
+            {
                 roundText.text = $"ROUND {state.round}";
+                roundText.gameObject.SetActive(showHUD);
+            }
 
-            if (p1HealthBar != null) p1HealthBar.fillAmount = (float)state.player1.health / PlayerController.MAX_HEALTH;
-            if (p2HealthBar != null) p2HealthBar.fillAmount = (float)state.player2.health / PlayerController.MAX_HEALTH;
+            if (p1HealthBar != null) { p1HealthBar.fillAmount = (float)state.player1.health / PlayerController.MAX_HEALTH; p1HealthBar.gameObject.SetActive(showHUD); }
+            if (p2HealthBar != null) { p2HealthBar.fillAmount = (float)state.player2.health / PlayerController.MAX_HEALTH; p2HealthBar.gameObject.SetActive(showHUD); }
 
             if (p1StaminaBar != null)
             {
                 p1StaminaBar.fillAmount = (float)state.player1.stamina / PlayerController.MAX_STAMINA;
                 p1StaminaBar.color = state.player1.slowTimer > 0 ? new Color(0.5f, 0.3f, 1f) : new Color(0.2f, 0.8f, 0.2f);
+                p1StaminaBar.gameObject.SetActive(showHUD);
             }
             if (p2StaminaBar != null)
             {
                 p2StaminaBar.fillAmount = (float)state.player2.stamina / PlayerController.MAX_STAMINA;
                 p2StaminaBar.color = state.player2.slowTimer > 0 ? new Color(0.5f, 0.3f, 1f) : new Color(0.2f, 0.8f, 0.2f);
+                p2StaminaBar.gameObject.SetActive(showHUD);
             }
 
             for (int i = 0; i < 3; i++)
             {
                 if (p1WinDots[i] != null)
+                {
                     p1WinDots[i].color = i < state.player1Wins ? Color.red : new Color(0.3f, 0.3f, 0.3f);
+                    p1WinDots[i].gameObject.SetActive(showHUD);
+                }
                 if (p2WinDots[i] != null)
+                {
                     p2WinDots[i].color = i < state.player2Wins ? new Color(0.3f, 0.6f, 1f) : new Color(0.3f, 0.3f, 0.3f);
+                    p2WinDots[i].gameObject.SetActive(showHUD);
+                }
             }
 
             if (p1CooldownText != null)
+            {
                 p1CooldownText.text = $"J:{CdStr(state.player1.attackCooldownLeft)}  K:{CdStr(state.player1.sungkitCooldownLeft)}  L:{CdStr(state.player1.launchCooldownLeft)}";
+                p1CooldownText.gameObject.SetActive(showHUD);
+            }
             if (p2CooldownText != null)
+            {
                 p2CooldownText.text = $"Num1:{CdStr(state.player2.attackCooldownLeft)}  Num2:{CdStr(state.player2.sungkitCooldownLeft)}  Num3:{CdStr(state.player2.launchCooldownLeft)}";
+                p2CooldownText.gameObject.SetActive(showHUD);
+            }
+            if (p1NameTag != null) p1NameTag.gameObject.SetActive(showHUD);
+            if (p2NameTag != null) p2NameTag.gameObject.SetActive(showHUD);
+            if (p1HealthFrame != null) p1HealthFrame.gameObject.SetActive(showHUD);
+            if (p2HealthFrame != null) p2HealthFrame.gameObject.SetActive(showHUD);
 
             if (redWinOverlay != null) redWinOverlay.gameObject.SetActive(state.showRedWin);
             if (blueWinOverlay != null) blueWinOverlay.gameObject.SetActive(state.showBlueWin);
