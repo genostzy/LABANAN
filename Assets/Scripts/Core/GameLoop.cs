@@ -69,30 +69,37 @@ namespace LABANAN
 
         private void Start()
         {
-            tickInterval = 1f / targetTickRate;
-            mainCam = Camera.main;
-            if (mainCam != null)
+            try
             {
-                mainCam.clearFlags = CameraClearFlags.SolidColor;
-                mainCam.backgroundColor = Color.black;
-            }
+                tickInterval = 1f / targetTickRate;
+                mainCam = Camera.main;
+                if (mainCam != null)
+                {
+                    mainCam.clearFlags = CameraClearFlags.SolidColor;
+                    mainCam.backgroundColor = Color.black;
+                }
 
-            if (whiteSprite == null)
+                if (whiteSprite == null)
+                {
+                    var tex = new Texture2D(4, 4);
+                    var px = new Color[16];
+                    for (int i = 0; i < 16; i++) px[i] = Color.white;
+                    tex.SetPixels(px);
+                    tex.Apply();
+                    whiteSprite = Sprite.Create(tex, new Rect(0, 0, 4, 4), new Vector2(0.5f, 0.5f), 4);
+                }
+
+                LoadSprites();
+                SetupBackground();
+                SetupPlatforms();
+                SetupUI();
+                SetupConnectionUI();
+                Debug.Log("GameLoop.Start() complete");
+            }
+            catch (System.Exception e)
             {
-                var tex = new Texture2D(4, 4);
-                var px = new Color[16];
-                for (int i = 0; i < 16; i++) px[i] = Color.white;
-                tex.SetPixels(px);
-                tex.Apply();
-                whiteSprite = Sprite.Create(tex, new Rect(0, 0, 4, 4), new Vector2(0.5f, 0.5f), 4);
+                Debug.LogError($"GameLoop.Start() FAILED: {e}");
             }
-
-            LoadSprites();
-            SetupBackground();
-            SetupPlatforms();
-            SetupUI();
-            SetupConnectionUI();
-            Debug.Log("GameLoop.Start() complete");
         }
 
         private void LoadSprites()
