@@ -16,7 +16,7 @@ namespace LABANAN
         public const int KNOCKBACK_FORCE = 80;
         public const int PARRY_KNOCKBACK_FORCE = 120;
         public const int LAUNCH_SPEED = 200;
-        public const int LAUNCH_DURATION = 22;
+        public const int LAUNCH_DURATION = 36;
 
         // ── Damage ──
         public const int MAX_HEALTH = 100;
@@ -446,7 +446,7 @@ namespace LABANAN
         private static bool IsAttacking(PlayerState state)
         {
             int maxFrames = GetAnimFrames(state.animState);
-            int hitFrame = state.launch ? maxFrames - 1 : maxFrames - 2;
+            int hitFrame = state.launch ? maxFrames - 2 : maxFrames - 2;
             bool inHitFrames = state.animIndex >= hitFrame;
             return inHitFrames && (state.attacking || state.sungkit || state.launch);
         }
