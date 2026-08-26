@@ -55,6 +55,9 @@ namespace LABANAN
         // Stamina regen timer (counts frames, regens +1 per second)
         public int staminaRegenTimer;
 
+        // Hit connected this attack (prevents multi-hit)
+        public bool hitConnected;
+
         public static PlayerState CreateDefault(int spawnX, int spawnY, bool facingLeft)
         {
             return new PlayerState
@@ -91,7 +94,8 @@ namespace LABANAN
                 launchTimer = 0,
                 actionLockFramesLeft = 0,
                 slowTimer = 0,
-                staminaRegenTimer = 0
+                staminaRegenTimer = 0,
+                hitConnected = false
             };
         }
 

@@ -96,6 +96,7 @@ namespace LABANAN
                 hash = (hash ^ (uint)(player1.sungkit ? 1 : 0)) * 16777619;
                 hash = (hash ^ (uint)(player1.launch ? 1 : 0)) * 16777619;
                 hash = (hash ^ (uint)(player1.blocking ? 1 : 0)) * 16777619;
+                hash = (hash ^ (uint)(player1.hitConnected ? 1 : 0)) * 16777619;
                 hash = (hash ^ (uint)player2.x) * 16777619;
                 hash = (hash ^ (uint)player2.y) * 16777619;
                 hash = (hash ^ (uint)player2.health) * 16777619;
@@ -107,6 +108,7 @@ namespace LABANAN
                 hash = (hash ^ (uint)(player2.sungkit ? 1 : 0)) * 16777619;
                 hash = (hash ^ (uint)(player2.launch ? 1 : 0)) * 16777619;
                 hash = (hash ^ (uint)(player2.blocking ? 1 : 0)) * 16777619;
+                hash = (hash ^ (uint)(player2.hitConnected ? 1 : 0)) * 16777619;
                 hash = (hash ^ (uint)round) * 16777619;
                 hash = (hash ^ (uint)player1Wins) * 16777619;
                 hash = (hash ^ (uint)player2Wins) * 16777619;
@@ -212,6 +214,7 @@ namespace LABANAN
             w.Write(p.actionLockFramesLeft);
             w.Write(p.slowTimer);
             w.Write(p.staminaRegenTimer);
+            w.Write(p.hitConnected);
         }
 
         private static PlayerState ReadPlayerState(System.IO.BinaryReader r)
@@ -250,7 +253,8 @@ namespace LABANAN
                 launchTimer = r.ReadInt32(),
                 actionLockFramesLeft = r.ReadInt32(),
                 slowTimer = r.ReadInt32(),
-                staminaRegenTimer = r.ReadInt32()
+                staminaRegenTimer = r.ReadInt32(),
+                hitConnected = r.ReadBoolean()
             };
         }
     }

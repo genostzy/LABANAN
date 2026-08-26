@@ -203,6 +203,11 @@ namespace LABANAN
             bool p1Attacking = currentState.player1.attacking || currentState.player1.sungkit || currentState.player1.launch;
             bool p1JustStarted = currentState.player1.attackStartupFrames == PlayerController.ATTACK_STARTUP - 1;
 
+            if (p1Hit.damage > 0 || p1Hit.knockbackDefender || p1Hit.knockbackAttacker)
+            {
+                currentState.player1.hitConnected = true;
+            }
+
             if (p1Hit.damage > 0)
             {
                 currentState.player2.health -= p1Hit.damage;
@@ -257,6 +262,11 @@ namespace LABANAN
 
             bool p2Attacking = currentState.player2.attacking || currentState.player2.sungkit || currentState.player2.launch;
             bool p2JustStarted = currentState.player2.attackStartupFrames == PlayerController.ATTACK_STARTUP - 1;
+
+            if (p2Hit.damage > 0 || p2Hit.knockbackDefender || p2Hit.knockbackAttacker)
+            {
+                currentState.player2.hitConnected = true;
+            }
 
             if (p2Hit.damage > 0)
             {

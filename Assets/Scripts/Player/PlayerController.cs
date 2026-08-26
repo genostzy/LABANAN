@@ -221,6 +221,7 @@ namespace LABANAN
                 if (input.HasAttack && state.stamina >= SWORD_STAMINA_COST)
                 {
                     state.attacking = true;
+                    state.hitConnected = false;
                     state.stamina -= SWORD_STAMINA_COST;
                     state.attackCooldownLeft = ATTACK_COOLDOWN;
                     state.actionLockFramesLeft = ACTION_LOCK_DURATION;
@@ -229,6 +230,7 @@ namespace LABANAN
                 else if (input.HasSungkit && state.sungkitCooldownLeft <= 0 && state.stamina >= SUNGKIT_STAMINA_COST)
                 {
                     state.sungkit = true;
+                    state.hitConnected = false;
                     state.stamina -= SUNGKIT_STAMINA_COST;
                     state.sungkitCooldownLeft = SUNGKIT_COOLDOWN;
                     state.actionLockFramesLeft = ACTION_LOCK_DURATION;
@@ -236,6 +238,7 @@ namespace LABANAN
                 else if (input.HasLaunch && state.stamina >= LAUNCH_STAMINA_COST)
                 {
                     state.launch = true;
+                    state.hitConnected = false;
                     state.stamina -= LAUNCH_STAMINA_COST;
                     state.launchTimer = LAUNCH_DURATION;
                     state.launchCooldownLeft = LAUNCH_COOLDOWN;
@@ -403,7 +406,7 @@ namespace LABANAN
             Rect attackHitbox = GetAttackHitbox(attacker);
             Rect defenderHitbox = GetPlayerHitbox(defender);
 
-            bool hit = attackHitbox.Overlaps(defenderHitbox) && IsAttacking(attacker);
+            bool hit = attackHitbox.Overlaps(defenderHitbox) && IsAttacking(attacker) && !attacker.hitConnected;
             if (!hit) return result;
 
             result.attackType = attacker.attacking ? 1 : attacker.sungkit ? 2 : 3;
