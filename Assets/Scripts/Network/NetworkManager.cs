@@ -48,8 +48,11 @@ namespace LABANAN
         public InputData[] RemoteInputBuffer => remoteInputBuffer;
 
         // Checksum sync
+        private uint[] localChecksumBuffer = new uint[256];
+        private bool[] localChecksumSet = new bool[256];
         private uint lastLocalChecksum;
         private uint lastRemoteChecksum;
+        private int lastRemoteChecksumFrame = -1;
         public uint LastLocalChecksum => lastLocalChecksum;
         public uint LastRemoteChecksum => lastRemoteChecksum;
         public bool ChecksumMismatch { get; private set; }
@@ -209,7 +212,17 @@ namespace LABANAN
 
                             if (data.Length >= 9)
                             {
-                                lastRemoteChecksum = BitConverter.ToUInt32(data, 5);
+                                // Only the packet for its own frame carries a real (non-zero)
+                                // checksum (see SendInputs) - redundant resends of older frames
+                                // carry zero and must not stomp a newer, already-recorded value.
+                                uint remoteChecksum = BitConverter.ToUInt32(data, 5);
+                                if (remoteChecksum != 0 && frame > lastRemoteChecksumFrame)
+                                {
+                                    lastRemoteChecksum = remoteChecksum;
+                                    lastRemoteChecksumFrame = frame;
+                                    if (localChecksumSet[frame % 256])
+                                        ChecksumMismatch = localChecksumBuffer[frame % 256] != remoteChecksum;
+                                }
                             }
                         }
                     }
@@ -252,13 +265,24 @@ namespace LABANAN
         }
 
         /// <summary>
+        /// Record this peer's checksum for a specific simulated frame, for desync detection.
+        /// </summary>
+        public void RecordLocalChecksum(int frame, uint checksum)
+        {
+            localChecksumBuffer[frame % 256] = checksum;
+            localChecksumSet[frame % 256] = true;
+            lastLocalChecksum = checksum;
+
+            if (frame == lastRemoteChecksumFrame)
+                ChecksumMismatch = checksum != lastRemoteChecksum;
+        }
+
+        /// <summary>
         /// Send all un-acknowledged inputs to peer.
         /// </summary>
-        public void SendInputs(int currentFrame, uint checksum)
+        public void SendInputs(int currentFrame)
         {
             if (remoteEndPoint == null || udpClient == null) return;
-
-            lastLocalChecksum = checksum;
 
             // Send last N frames of input for reliability
             int startFrame = Math.Max(0, currentFrame - inputBufferFrames);
@@ -269,7 +293,12 @@ namespace LABANAN
                 byte[] data = new byte[9];
                 Buffer.BlockCopy(BitConverter.GetBytes(input.frame), 0, data, 0, 4);
                 data[4] = input.buttons;
-                Buffer.BlockCopy(BitConverter.GetBytes(checksum), 0, data, 5, 4);
+
+                // Only the current frame's packet carries a real checksum - older frames in
+                // this resend batch already had their own checksum tagged when they were current,
+                // so re-stamping them here would misrepresent which frame the checksum is for.
+                if (f == currentFrame && localChecksumSet[f % 256])
+                    Buffer.BlockCopy(BitConverter.GetBytes(localChecksumBuffer[f % 256]), 0, data, 5, 4);
 
                 try { udpClient.Send(data, data.Length, remoteEndPoint); }
                 catch { }

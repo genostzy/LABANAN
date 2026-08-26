@@ -32,6 +32,9 @@ namespace LABANAN
         // Round start lock (pwesto SFX duration)
         public int roundStartTimer;
 
+        // Hit stop (frames remaining where simulation is frozen on a landed hit)
+        public int hitStopFrames;
+
         // Post-win pause before next round
         public int postWinPause;
 
@@ -60,6 +63,7 @@ namespace LABANAN
                 showRedWin = false,
                 winDisplayTimerFrames = 0,
                 roundStartTimer = 0,
+                hitStopFrames = 0,
                 postWinPause = 0,
                 preWinPause = 0,
                 preWinCaller = 0,
@@ -107,6 +111,7 @@ namespace LABANAN
                 hash = (hash ^ (uint)player1Wins) * 16777619;
                 hash = (hash ^ (uint)player2Wins) * 16777619;
                 hash = (hash ^ (uint)timer) * 16777619;
+                hash = (hash ^ (uint)hitStopFrames) * 16777619;
                 return hash;
             }
         }
@@ -132,6 +137,7 @@ namespace LABANAN
                 writer.Write(showRedWin);
                 writer.Write(winDisplayTimerFrames);
                 writer.Write(roundStartTimer);
+                writer.Write(hitStopFrames);
                 writer.Write(postWinPause);
                 writer.Write(preWinPause);
                 writer.Write(preWinCaller);
@@ -162,6 +168,7 @@ namespace LABANAN
                 state.showRedWin = reader.ReadBoolean();
                 state.winDisplayTimerFrames = reader.ReadInt32();
                 state.roundStartTimer = reader.ReadInt32();
+                state.hitStopFrames = reader.ReadInt32();
                 state.postWinPause = reader.ReadInt32();
                 state.preWinPause = reader.ReadInt32();
                 state.preWinCaller = reader.ReadInt32();
