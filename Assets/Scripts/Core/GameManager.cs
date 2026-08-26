@@ -21,7 +21,6 @@ namespace LABANAN
         private bool gameRunning;
 
         // Hit stop
-        public int hitStopFrames;
         public const int HIT_STOP_LIGHT = 4;
         public const int HIT_STOP_HEAVY = 8;
 
@@ -71,16 +70,16 @@ namespace LABANAN
         {
             if (!gameRunning) return;
 
-            if (hitStopFrames > 0)
-            {
-                hitStopFrames--;
-                currentState.frame++;
-                return;
-            }
-
             if (NetworkManager.Instance != null)
             {
                 NetworkManager.Instance.SaveGameState(currentState.frame, currentState);
+            }
+
+            if (currentState.hitStopFrames > 0)
+            {
+                currentState.hitStopFrames--;
+                currentState.frame++;
+                return;
             }
 
             if (currentState.showLaban)
@@ -211,10 +210,7 @@ namespace LABANAN
 
                 Debug.Log($"[COMBAT] P1 hit P2 for {p1Hit.damage} (type={p1Hit.attackType})");
 
-                if (p1Hit.attackType == 3)
-                    hitStopFrames = HIT_STOP_HEAVY;
-                else
-                    hitStopFrames = HIT_STOP_LIGHT;
+                currentState.hitStopFrames = p1Hit.attackType == 3 ? HIT_STOP_HEAVY : HIT_STOP_LIGHT;
 
                 if (AudioManager.Instance != null)
                 {
@@ -269,10 +265,7 @@ namespace LABANAN
 
                 Debug.Log($"[COMBAT] P2 hit P1 for {p2Hit.damage} (type={p2Hit.attackType})");
 
-                if (p2Hit.attackType == 3)
-                    hitStopFrames = HIT_STOP_HEAVY;
-                else
-                    hitStopFrames = HIT_STOP_LIGHT;
+                currentState.hitStopFrames = p2Hit.attackType == 3 ? HIT_STOP_HEAVY : HIT_STOP_LIGHT;
 
                 if (AudioManager.Instance != null)
                 {

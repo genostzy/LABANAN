@@ -18,8 +18,7 @@ namespace LABANAN
         private InputData remoteInput;
         private bool debugTogglePressed;
         private InputData bufferedInput;
-        private InputData[] localInputBuffer = new InputData[256];
-        private InputData[] remoteInputBuffer = new InputData[256];
+        private InputData bufferedInput2; // couch multiplayer: player 2's buffered attack presses
 
         private SpriteRenderer player1Sprite;
         private SpriteRenderer player2Sprite;
@@ -422,14 +421,44 @@ namespace LABANAN
             var uiCanvas = connectionUIRoot.AddComponent<Canvas>();
             uiCanvas.renderMode = RenderMode.ScreenSpaceOverlay;
             uiCanvas.sortingOrder = 100;
-            connectionUIRoot.AddComponent<CanvasScaler>();
+            var canvasScaler = connectionUIRoot.AddComponent<CanvasScaler>();
+            canvasScaler.uiScaleMode = CanvasScaler.ScaleMode.ScaleWithScreenSize;
+            canvasScaler.referenceResolution = new Vector2(1920, 1080);
             connectionUIRoot.AddComponent<GraphicRaycaster>();
+
+            // Full-screen menu art, added first so it renders behind every other element
+            // and behind the in-progress scene (this canvas otherwise had no opaque
+            // background, so the stage/players were visible bleeding through the menu).
+            var menuTex = Resources.Load<Texture2D>("Sprites/menu");
+            if (menuTex != null)
+            {
+                var bgObj = new GameObject("Background");
+                bgObj.transform.SetParent(connectionUIRoot.transform, false);
+                var bgRt = bgObj.AddComponent<RectTransform>();
+                bgRt.anchorMin = Vector2.zero;
+                bgRt.anchorMax = Vector2.one;
+                bgRt.offsetMin = Vector2.zero;
+                bgRt.offsetMax = Vector2.zero;
+                var bgImg = bgObj.AddComponent<Image>();
+                bgImg.sprite = Sprite.Create(menuTex, new Rect(0, 0, menuTex.width, menuTex.height), new Vector2(0.5f, 0.5f));
+                bgImg.preserveAspect = false;
+            }
+
+            // Dark overlay to fully cover the game scene behind the menu
+            var overlayObj = new GameObject("DarkOverlay");
+            overlayObj.transform.SetParent(connectionUIRoot.transform, false);
+            var overlayRt = overlayObj.AddComponent<RectTransform>();
+            overlayRt.anchorMin = Vector2.zero;
+            overlayRt.anchorMax = Vector2.one;
+            overlayRt.offsetMin = Vector2.zero;
+            overlayRt.offsetMax = Vector2.zero;
+            var overlayImg = overlayObj.AddComponent<Image>();
+            overlayImg.color = new Color(0, 0, 0, 0.6f);
+            overlayImg.raycastTarget = false;
 
             var font = GetFont();
 
-            CreateText(connectionUIRoot.transform, "Title", "LABANAN", 72, TextAnchor.MiddleCenter,
-                new Vector2(0.2f, 0.65f), new Vector2(0.8f, 0.85f), Color.white, font);
-
+            // "LABANAN" is already part of the menu art above, so no separate title label here.
             CreateText(connectionUIRoot.transform, "Subtitle", "ONLINE FIGHTING", 24, TextAnchor.MiddleCenter,
                 new Vector2(0.2f, 0.55f), new Vector2(0.8f, 0.65f), new Color(0.6f, 0.6f, 0.6f), font);
 
@@ -485,7 +514,8 @@ namespace LABANAN
                     if (NetworkManager.Instance != null)
                     {
                         NetworkManager.Instance.Host();
-                        OnConnectedToGame();
+                        // Wait for the real handshake (NetworkManager.OnConnected, subscribed below)
+                        // instead of starting the match immediately, matching the JoinBtn flow.
                     }
                 });
 
@@ -602,6 +632,31 @@ namespace LABANAN
             if (Input.GetKeyDown(KeyCode.L))
                 bufferedInput.buttons |= InputData.LAUNCH;
 
+            // Controller 1 attack buttons (A/B/X on a standard gamepad), optional alongside J/K/L.
+            if (Input.GetKeyDown(KeyCode.Joystick1Button0))
+                bufferedInput.buttons |= InputData.ATTACK;
+            if (Input.GetKeyDown(KeyCode.Joystick1Button1))
+                bufferedInput.buttons |= InputData.SUNGKIT;
+            if (Input.GetKeyDown(KeyCode.Joystick1Button2))
+                bufferedInput.buttons |= InputData.LAUNCH;
+
+            // Couch multiplayer: player 2 shares the keyboard (arrows + numpad) when not
+            // networked, so their attack presses need the same edge-detected buffering as P1's.
+            if (Input.GetKeyDown(KeyCode.Keypad1))
+                bufferedInput2.buttons |= InputData.ATTACK;
+            if (Input.GetKeyDown(KeyCode.Keypad2))
+                bufferedInput2.buttons |= InputData.SUNGKIT;
+            if (Input.GetKeyDown(KeyCode.Keypad3))
+                bufferedInput2.buttons |= InputData.LAUNCH;
+
+            // Controller 2 attack buttons, independent of controller 1 (joystick 2 vs joystick 1).
+            if (Input.GetKeyDown(KeyCode.Joystick2Button0))
+                bufferedInput2.buttons |= InputData.ATTACK;
+            if (Input.GetKeyDown(KeyCode.Joystick2Button1))
+                bufferedInput2.buttons |= InputData.SUNGKIT;
+            if (Input.GetKeyDown(KeyCode.Joystick2Button2))
+                bufferedInput2.buttons |= InputData.LAUNCH;
+
             if (Input.GetKeyDown(KeyCode.H) && !debugTogglePressed)
             {
                 debugTogglePressed = true;
@@ -687,20 +742,27 @@ namespace LABANAN
             CollectLocalInput();
             localInput.buttons |= bufferedInput.buttons;
             bufferedInput = InputData.Create(0);
+            InputData bufferedP2 = bufferedInput2;
+            bufferedInput2 = InputData.Create(0);
 
             if (NetworkManager.Instance != null &&
                 NetworkManager.Instance.State == NetworkManager.ConnectionState.Connected)
             {
-                localInputBuffer[currentFrame % 256] = localInput;
                 NetworkManager.Instance.RecordLocalInput(currentFrame, localInput);
-                uint checksum = GameManager.Instance.currentState.ComputeChecksum();
-                NetworkManager.Instance.SendInputs(currentFrame, checksum);
+                if (GameManager.Instance != null)
+                {
+                    uint checksum = GameManager.Instance.currentState.ComputeChecksum();
+                    NetworkManager.Instance.RecordLocalChecksum(currentFrame, checksum);
+                }
+                NetworkManager.Instance.SendInputs(currentFrame);
                 HandleRollback();
             }
             else
             {
-                localInputBuffer[currentFrame % 256] = localInput;
-                remoteInput = InputData.Create(currentFrame);
+                // Couch multiplayer: player 2 controls their own character locally instead
+                // of an idle dummy, mirroring how player 1's buffered attacks are merged in.
+                remoteInput = CollectP2LocalInput();
+                remoteInput.buttons |= bufferedP2.buttons;
             }
 
             tickAccumulator += Time.fixedDeltaTime;
@@ -713,7 +775,6 @@ namespace LABANAN
                     NetworkManager.Instance.State == NetworkManager.ConnectionState.Connected)
                 {
                     NetworkManager.Instance.GetRemoteInput(currentFrame, out remoteInput);
-                    remoteInputBuffer[currentFrame % 256] = remoteInput;
                 }
 
                 GameManager.Instance?.Tick(localInput, remoteInput);
@@ -781,26 +842,30 @@ namespace LABANAN
 
             if (player1Sprite != null)
             {
-                float playerY = player1Sprite.transform.position.y;
+                float midX = (FixedMath.ToFloat(state.player1.x) + FixedMath.ToFloat(state.player2.x)) * 0.5f;
+                float midY = (FixedMath.ToFloat(state.player1.y) + FixedMath.ToFloat(state.player2.y)) * 0.5f;
+                float playerY = midY;
                 float baseCamY = 1.5f;
                 float camY = baseCamY + playerY * 0.3f;
                 float baseOrtho = 3.5f;
                 float orthoSize = baseOrtho + Mathf.Abs(playerY - baseCamY) * 0.5f;
-                orthoSize = Mathf.Clamp(orthoSize, 3f, 8f);
+                float distBetween = Mathf.Abs(FixedMath.ToFloat(state.player1.x) - FixedMath.ToFloat(state.player2.x));
+                float minOrtho = Mathf.Max(3.5f, distBetween * 0.12f + 2f);
+                orthoSize = Mathf.Clamp(orthoSize, minOrtho, 8f);
 
-                float camX = player1Sprite.transform.position.x;
+                float camX = midX;
 
                 if (state.roundStartTimer > 0)
                 {
-                    float midX = (FixedMath.ToFloat(state.player1.x) + FixedMath.ToFloat(state.player2.x)) * 0.5f;
-                    float midY = (FixedMath.ToFloat(state.player1.y) + FixedMath.ToFloat(state.player2.y)) * 0.5f + 0.5f;
-                    camX = Mathf.Lerp(mainCam.transform.position.x, midX, 0.08f);
-                    camY = Mathf.Lerp(mainCam.transform.position.y, midY, 0.08f);
+                    float midXstart = midX;
+                    float midYstart = midY + 0.5f;
+                    camX = Mathf.Lerp(mainCam.transform.position.x, midXstart, 0.08f);
+                    camY = Mathf.Lerp(mainCam.transform.position.y, midYstart, 0.08f);
                     orthoSize = Mathf.Lerp(mainCam.orthographicSize, 2.2f, 0.08f);
                 }
                 else
                 {
-                    camX = Mathf.Lerp(mainCam.transform.position.x, player1Sprite.transform.position.x, 0.15f);
+                    camX = Mathf.Lerp(mainCam.transform.position.x, midX, 0.15f);
                     camY = Mathf.Lerp(mainCam.transform.position.y, camY, 0.15f);
                     orthoSize = Mathf.Lerp(mainCam.orthographicSize, orthoSize, 0.15f);
                 }
@@ -864,7 +929,7 @@ namespace LABANAN
             if (p1CooldownText != null)
                 p1CooldownText.text = $"J:{CdStr(state.player1.attackCooldownLeft)}  K:{CdStr(state.player1.sungkitCooldownLeft)}  L:{CdStr(state.player1.launchCooldownLeft)}";
             if (p2CooldownText != null)
-                p2CooldownText.text = $"J:{CdStr(state.player2.attackCooldownLeft)}  K:{CdStr(state.player2.sungkitCooldownLeft)}  L:{CdStr(state.player2.launchCooldownLeft)}";
+                p2CooldownText.text = $"Num1:{CdStr(state.player2.attackCooldownLeft)}  Num2:{CdStr(state.player2.sungkitCooldownLeft)}  Num3:{CdStr(state.player2.launchCooldownLeft)}";
 
             if (redWinOverlay != null) redWinOverlay.gameObject.SetActive(state.showRedWin);
             if (blueWinOverlay != null) blueWinOverlay.gameObject.SetActive(state.showBlueWin);
@@ -881,6 +946,12 @@ namespace LABANAN
         //  INPUT
         // ──────────────────────────────────────────────
 
+        // Controller support: analog stick axes are defined per-joystick in
+        // ProjectSettings/InputManager.asset (P1_Horizontal/Vertical -> joystick 1,
+        // P2_Horizontal/Vertical -> joystick 2), so each player's pad is independent
+        // of the other's and of the keyboard.
+        private const float STICK_THRESHOLD = 0.5f;
+
         private void CollectLocalInput()
         {
             localInput = InputData.Create(currentFrame);
@@ -889,6 +960,36 @@ namespace LABANAN
             if (Input.GetKey(KeyCode.W)) localInput.buttons |= InputData.UP;
             if (Input.GetKey(KeyCode.S)) localInput.buttons |= InputData.DOWN;
             if (Input.GetKey(KeyCode.Space)) localInput.buttons |= InputData.BLOCK;
+
+            // Controller 1 (optional, works alongside the keyboard)
+            float h1 = Input.GetAxis("P1_Horizontal");
+            float v1 = Input.GetAxis("P1_Vertical");
+            if (h1 < -STICK_THRESHOLD) localInput.buttons |= InputData.LEFT;
+            if (h1 > STICK_THRESHOLD) localInput.buttons |= InputData.RIGHT;
+            if (v1 > STICK_THRESHOLD) localInput.buttons |= InputData.UP;
+            if (v1 < -STICK_THRESHOLD) localInput.buttons |= InputData.DOWN;
+            if (Input.GetKey(KeyCode.Joystick1Button4)) localInput.buttons |= InputData.BLOCK;
+        }
+
+        // Couch multiplayer: player 2's movement, sharing the same keyboard (arrows + numpad)
+        // or their own controller (joystick 2).
+        private InputData CollectP2LocalInput()
+        {
+            InputData input = InputData.Create(currentFrame);
+            if (Input.GetKey(KeyCode.LeftArrow)) input.buttons |= InputData.LEFT;
+            if (Input.GetKey(KeyCode.RightArrow)) input.buttons |= InputData.RIGHT;
+            if (Input.GetKey(KeyCode.UpArrow)) input.buttons |= InputData.UP;
+            if (Input.GetKey(KeyCode.DownArrow)) input.buttons |= InputData.DOWN;
+
+            float h2 = Input.GetAxis("P2_Horizontal");
+            float v2 = Input.GetAxis("P2_Vertical");
+            if (h2 < -STICK_THRESHOLD) input.buttons |= InputData.LEFT;
+            if (h2 > STICK_THRESHOLD) input.buttons |= InputData.RIGHT;
+            if (v2 > STICK_THRESHOLD) input.buttons |= InputData.UP;
+            if (v2 < -STICK_THRESHOLD) input.buttons |= InputData.DOWN;
+            if (Input.GetKey(KeyCode.Joystick2Button4)) input.buttons |= InputData.BLOCK;
+            if (Input.GetKey(KeyCode.Keypad0)) input.buttons |= InputData.BLOCK;
+            return input;
         }
 
         // ──────────────────────────────────────────────
@@ -907,12 +1008,10 @@ namespace LABANAN
                     GameManager.Instance.LoadState(rollbackState);
                     for (int f = rollbackFrame; f < currentFrame; f++)
                     {
-                        InputData local = NetworkManager.Instance.IsHost
-                            ? localInputBuffer[f % 256]
-                            : remoteInputBuffer[f % 256];
-                        InputData remote = NetworkManager.Instance.IsHost
-                            ? remoteInputBuffer[f % 256]
-                            : localInputBuffer[f % 256];
+                        // Read from NetworkManager's live buffers (not a local cache) so that
+                        // a remote input which has since arrived/corrected is actually used.
+                        InputData local = NetworkManager.Instance.LocalInputBuffer[f % 256];
+                        NetworkManager.Instance.GetRemoteInput(f, out InputData remote);
                         GameManager.Instance.Tick(local, remote);
                     }
                     NetworkManager.Instance.NotifyRollback(currentFrame - rollbackFrame);
@@ -950,9 +1049,9 @@ namespace LABANAN
             if (NetworkManager.Instance != null &&
                 NetworkManager.Instance.State == NetworkManager.ConnectionState.Connected)
             {
-                GUI.Label(new Rect(10, y, 500, lh), $"Ping: {NetworkManager.Instance.PingMs}ms  Rollback: {NetworkManager.Instance.Rollback.HistorySize} states  HitStop: {GameManager.Instance?.hitStopFrames ?? 0}");
+                GUI.Label(new Rect(10, y, 500, lh), $"Ping: {NetworkManager.Instance.PingMs}ms  Rollback: {NetworkManager.Instance.Rollback.HistorySize} states  HitStop: {GameManager.Instance?.currentState.hitStopFrames ?? 0}");
                 y += lh;
-                GUI.Label(new Rect(10, y, 500, lh), $"Local Checksum: {GameManager.Instance?.currentState.ComputeChecksum() ?? 0:X8}  Remote: {NetworkManager.Instance.LastRemoteChecksum:X8}");
+                GUI.Label(new Rect(10, y, 500, lh), $"Local Checksum: {NetworkManager.Instance.LastLocalChecksum:X8}  Remote: {NetworkManager.Instance.LastRemoteChecksum:X8}  Mismatch: {NetworkManager.Instance.ChecksumMismatch}");
                 y += lh;
             }
 

@@ -9,6 +9,19 @@
     "com.unity.modules.imgui": "1.0.0",
     "com.unity.modules.physics2d": "1.0.0",
     "com.unity.modules.ui": "1.0.0",
-    "com.unity.modules.uielements": "1.0.0"
-  }
+    "com.unity.modules.uielements": "1.0.0",
+    "com.ivanmurzak.unity.mcp": "0.90.0",
+    "com.ivanmurzak.unity.mcp.cinemachine": "1.0.17",
+    "com.ivanmurzak.unity.mcp.animation": "1.2.32"
+  },
+  "scopedRegistries": [
+    {
+      "name": "package.openupm.com",
+      "url": "https://package.openupm.com",
+      "scopes": [
+        "com.ivanmurzak",
+        "extensions.unity"
+      ]
+    }
+  ]
 }

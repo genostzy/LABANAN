@@ -11,17 +11,17 @@ namespace LABANAN
         public int MainWidth = 12000;
         public int MainHeight = 500;
 
-        // Left platform (elevated)
-        public int LeftX = 1500;
-        public int LeftY = 3500;
-        public int LeftWidth = 3000;
-        public int LeftHeight = 500;
+        // Left platform (elevated): X=0.4-5.6, top surface Y=4.9
+        public int LeftX = 400;
+        public int LeftY = 4900;
+        public int LeftWidth = 5200;
+        public int LeftHeight = 2000;
 
-        // Right platform (elevated)
-        public int RightX = 13500;
-        public int RightY = 3500;
-        public int RightWidth = 3000;
-        public int RightHeight = 500;
+        // Right platform (elevated): X=12.4-17.6, top surface Y=4.9
+        public int RightX = 12400;
+        public int RightY = 4900;
+        public int RightWidth = 5200;
+        public int RightHeight = 2000;
 
         public int DeathY = -5000;
 
