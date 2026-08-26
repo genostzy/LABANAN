@@ -62,6 +62,7 @@ namespace LABANAN
         private Image gameOverBlueWinsOverlay;
         private Image gameOverDrawOverlay;
         private bool prevIsGameOver;
+        private GameObject gameOverCanvas;
 
         private int prevTimer = 60;
 
@@ -316,14 +317,26 @@ namespace LABANAN
             // ── Pause overlay (hidden) ──
             pauseOverlay = CreateOverlaySprite("PauseOverlay", "Sprites/PAUSE");
 
-            // ── Game over overlays (hidden) ──
-            gameOverRedWinsOverlay = CreateOverlaySprite("GameOverRedWins", "Sprites/GameOver, again, exit (RED WINS)");
-            gameOverBlueWinsOverlay = CreateOverlaySprite("GameOverBlueWins", "Sprites/GameOver, again, exit (BLUE WINS)");
-            gameOverDrawOverlay = CreateOverlaySprite("GameOverDraw", "Sprites/GameOver, again, exit (DRAW)");
+            // ── Game over: separate canvas on top ──
+            gameOverCanvas = new GameObject("GameOverCanvas");
+            var goCanvas = gameOverCanvas.AddComponent<Canvas>();
+            goCanvas.renderMode = RenderMode.ScreenSpaceOverlay;
+            goCanvas.sortingOrder = 100;
+            var goScaler = gameOverCanvas.AddComponent<CanvasScaler>();
+            goScaler.uiScaleMode = CanvasScaler.ScaleMode.ScaleWithScreenSize;
+            goScaler.referenceResolution = new Vector2(1920, 1080);
+            gameOverCanvas.AddComponent<GraphicRaycaster>();
 
-            // ── Game Over buttons (centered, matching sprite positions) ──
+            // ── Game over overlays (hidden) ──
+            gameOverRedWinsOverlay = CreateOverlaySpriteOn(gameOverCanvas.transform, "GameOverRedWins", "Sprites/GameOver, again, exit (RED WINS)");
+            gameOverBlueWinsOverlay = CreateOverlaySpriteOn(gameOverCanvas.transform, "GameOverBlueWins", "Sprites/GameOver, again, exit (BLUE WINS)");
+            gameOverDrawOverlay = CreateOverlaySpriteOn(gameOverCanvas.transform, "GameOverDraw", "Sprites/GameOver, again, exit (DRAW)");
+
+            // ── Game Over buttons (on top of overlays, on the GO canvas) ──
             CreateGameOverButton("AgainBtn", new Vector2(0.35f, 0.22f), new Vector2(0.65f, 0.30f), font, OnAgainClicked);
             CreateGameOverButton("ExitBtn", new Vector2(0.35f, 0.10f), new Vector2(0.65f, 0.18f), font, OnExitClicked);
+
+            gameOverCanvas.SetActive(false);
 
             // ── Win overlay texts (hidden) ──
             CreateText(canvasObj.transform, "P1WinsText", "", 28, TextAnchor.MiddleLeft,
@@ -351,8 +364,13 @@ namespace LABANAN
 
         private Image CreateOverlaySprite(string name, string resourcePath)
         {
+            return CreateOverlaySpriteOn(canvasObj.transform, name, resourcePath);
+        }
+
+        private Image CreateOverlaySpriteOn(Transform parent, string name, string resourcePath)
+        {
             var obj = new GameObject(name);
-            obj.transform.SetParent(canvasObj.transform, false);
+            obj.transform.SetParent(parent, false);
             var rt = obj.AddComponent<RectTransform>();
             rt.anchorMin = Vector2.zero;
             rt.anchorMax = Vector2.one;
@@ -395,14 +413,14 @@ namespace LABANAN
         private void CreateGameOverButton(string name, Vector2 anchorMin, Vector2 anchorMax, Font font, UnityEngine.Events.UnityAction onClick)
         {
             var obj = new GameObject(name);
-            obj.transform.SetParent(canvasObj.transform, false);
+            obj.transform.SetParent(gameOverCanvas.transform, false);
             var rt = obj.AddComponent<RectTransform>();
             rt.anchorMin = anchorMin;
             rt.anchorMax = anchorMax;
             rt.offsetMin = Vector2.zero;
             rt.offsetMax = Vector2.zero;
             var img = obj.AddComponent<Image>();
-            img.color = new Color(0, 0, 0, 0.01f);
+            img.color = new Color(1, 1, 1, 0.01f);
             var btn = obj.AddComponent<Button>();
             btn.targetGraphic = img;
             btn.onClick.AddListener(onClick);
@@ -637,6 +655,7 @@ namespace LABANAN
 
         private void OnAgainClicked()
         {
+            if (gameOverCanvas != null) gameOverCanvas.SetActive(false);
             if (GameManager.Instance != null)
             {
                 GameManager.Instance.StartGame();
@@ -652,6 +671,7 @@ namespace LABANAN
 
         private void OnExitClicked()
         {
+            if (gameOverCanvas != null) gameOverCanvas.SetActive(false);
             gameStarted = false;
             prevIsGameOver = false;
             showConnectionUI = true;
@@ -1041,6 +1061,7 @@ namespace LABANAN
             bool isGameOverNow = state.isGameOver && !state.showRedWin && !state.showBlueWin;
             if (isGameOverNow != prevIsGameOver)
             {
+                if (gameOverCanvas != null) gameOverCanvas.SetActive(isGameOverNow);
                 var gameOverBtns = new[] { "AgainBtn", "ExitBtn" };
                 foreach (var btnName in gameOverBtns)
                 {
@@ -1055,12 +1076,6 @@ namespace LABANAN
                 if (gameOverRedWinsOverlay != null) gameOverRedWinsOverlay.gameObject.SetActive(redWins);
                 if (gameOverBlueWinsOverlay != null) gameOverBlueWinsOverlay.gameObject.SetActive(blueWins);
                 if (gameOverDrawOverlay != null) gameOverDrawOverlay.gameObject.SetActive(!redWins && !blueWins);
-            }
-            else
-            {
-                if (gameOverRedWinsOverlay != null) gameOverRedWinsOverlay.gameObject.SetActive(false);
-                if (gameOverBlueWinsOverlay != null) gameOverBlueWinsOverlay.gameObject.SetActive(false);
-                if (gameOverDrawOverlay != null) gameOverDrawOverlay.gameObject.SetActive(false);
             }
             prevIsGameOver = isGameOverNow;
         }
