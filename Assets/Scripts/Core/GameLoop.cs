@@ -362,6 +362,7 @@ namespace LABANAN
             hudRoot.SetActive(false);
             var canvas = canvasObj.AddComponent<Canvas>();
             canvas.renderMode = RenderMode.ScreenSpaceOverlay;
+            canvas.sortingOrder = 200;
             var scaler = canvasObj.AddComponent<CanvasScaler>();
             scaler.uiScaleMode = CanvasScaler.ScaleMode.ScaleWithScreenSize;
             scaler.referenceResolution = new Vector2(1920, 1080);
@@ -865,9 +866,12 @@ namespace LABANAN
 
         private void OnConnectedToGame()
         {
-            if (gameStarted) return; // prevent double-fire
+            if (gameStarted) return;
             showConnectionUI = false;
             if (connectionUIRoot != null) connectionUIRoot.SetActive(false);
+            if (mainMenuPage != null) mainMenuPage.SetActive(false);
+            if (hostPage != null) hostPage.SetActive(false);
+            if (joinPage != null) joinPage.SetActive(false);
             if (hudRoot != null) hudRoot.SetActive(true);
             gameStarted = true;
             if (GameManager.Instance != null)
@@ -1190,7 +1194,7 @@ namespace LABANAN
                 Vector3 targetP2 = new Vector3(
                     FixedMath.ToFloat(visualP2.x),
                     FixedMath.ToFloat(visualP2.y), 0);
-                player2Sprite.transform.position = Vector3.Lerp(prevP2VisualPos, targetP2, 0.3f);
+                player2Sprite.transform.position = Vector3.Lerp(prevP2VisualPos, targetP2, 0.6f);
                 prevP2VisualPos = player2Sprite.transform.position;
                 player2Sprite.flipX = false;
                 var sprite = GetSprite(blueSpr, blueR, visualP2.animState, visualP2.animIndex);
@@ -1208,7 +1212,7 @@ namespace LABANAN
                 Vector3 targetP1 = new Vector3(
                     FixedMath.ToFloat(visualP1.x),
                     FixedMath.ToFloat(visualP1.y), 0);
-                player1Sprite.transform.position = Vector3.Lerp(prevP1VisualPos, targetP1, 0.3f);
+                player1Sprite.transform.position = Vector3.Lerp(prevP1VisualPos, targetP1, 0.6f);
                 prevP1VisualPos = player1Sprite.transform.position;
                 player1Sprite.flipX = false;
                 var sprite = GetSprite(redSpr, redR, visualP1.animState, visualP1.animIndex);
