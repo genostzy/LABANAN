@@ -865,6 +865,7 @@ namespace LABANAN
 
         private void OnConnectedToGame()
         {
+            if (gameStarted) return; // prevent double-fire
             showConnectionUI = false;
             if (connectionUIRoot != null) connectionUIRoot.SetActive(false);
             if (hudRoot != null) hudRoot.SetActive(true);
@@ -1129,7 +1130,15 @@ namespace LABANAN
                     NetworkManager.Instance.GetRemoteInput(currentFrame, out remoteInput);
                 }
 
-                GameManager.Instance?.Tick(localInput, remoteInput);
+                // Joiner swaps arguments: their input goes to P2, remote to P1
+                bool joinerSwap = !isLocalGame && NetworkManager.Instance != null &&
+                    NetworkManager.Instance.State == NetworkManager.ConnectionState.Connected &&
+                    !NetworkManager.Instance.IsHost;
+
+                if (joinerSwap)
+                    GameManager.Instance?.Tick(remoteInput, localInput);
+                else
+                    GameManager.Instance?.Tick(localInput, remoteInput);
                 currentFrame++;
             }
         }
@@ -1417,18 +1426,6 @@ namespace LABANAN
             if (v1 > STICK_THRESHOLD) localInput.buttons |= InputData.UP;
             if (v1 < -STICK_THRESHOLD) localInput.buttons |= InputData.DOWN;
             if (Input.GetKey(KeyCode.Joystick1Button4)) localInput.buttons |= InputData.BLOCK;
-
-            // Online joiner: mirror left/right so your character moves correctly on your screen
-            if (!isLocalGame && NetworkManager.Instance != null &&
-                NetworkManager.Instance.State == NetworkManager.ConnectionState.Connected &&
-                !NetworkManager.Instance.IsHost)
-            {
-                bool hadLeft = (localInput.buttons & InputData.LEFT) != 0;
-                bool hadRight = (localInput.buttons & InputData.RIGHT) != 0;
-                localInput.buttons &= unchecked((byte)~(InputData.LEFT | InputData.RIGHT));
-                if (hadLeft) localInput.buttons |= InputData.RIGHT;
-                if (hadRight) localInput.buttons |= InputData.LEFT;
-            }
         }
 
         // Couch multiplayer: player 2's movement, sharing the same keyboard (arrows + numpad)
@@ -1466,13 +1463,17 @@ namespace LABANAN
                 if (NetworkManager.Instance.TryLoadGameState(rollbackFrame, out GameState rollbackState))
                 {
                     GameManager.Instance.LoadState(rollbackState);
+                    bool joinerSwap = !isLocalGame && NetworkManager.Instance != null &&
+                        NetworkManager.Instance.State == NetworkManager.ConnectionState.Connected &&
+                        !NetworkManager.Instance.IsHost;
                     for (int f = rollbackFrame; f < currentFrame; f++)
                     {
-                        // Read from NetworkManager's live buffers (not a local cache) so that
-                        // a remote input which has since arrived/corrected is actually used.
                         InputData local = NetworkManager.Instance.LocalInputBuffer[f % 256];
                         NetworkManager.Instance.GetRemoteInput(f, out InputData remote);
-                        GameManager.Instance.Tick(local, remote);
+                        if (joinerSwap)
+                            GameManager.Instance.Tick(remote, local);
+                        else
+                            GameManager.Instance.Tick(local, remote);
                     }
                     NetworkManager.Instance.NotifyRollback(currentFrame - rollbackFrame);
                 }

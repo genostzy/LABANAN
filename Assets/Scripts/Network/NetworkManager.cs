@@ -180,17 +180,26 @@ namespace LABANAN
                     byte[] data = udpClient.Receive(ref senderEp);
                     lastReceiveTimeMs = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds();
 
-                    // Connection request (0xFF)
+                    // Connection accepted (0xFF)
                     if (data.Length == 1 && data[0] == 0xFF && State == ConnectionState.Connecting)
                     {
                         if (remoteEndPoint == null)
                             remoteEndPoint = senderEp;
-                        // Send acceptance back to joiner
-                        try { udpClient.Send(new byte[] { 0xFF }, 1, senderEp); }
-                        catch { }
+                        // Host sends acceptance back; joiner just receives it
+                        if (IsHost)
+                        {
+                            try { udpClient.Send(new byte[] { 0xFF }, 1, senderEp); }
+                            catch { }
+                        }
                         State = ConnectionState.Connected;
                         UnityMainThread.Enqueue(() => OnConnected?.Invoke());
                         Debug.Log("Connected!");
+                        continue;
+                    }
+
+                    // Ignore0xFF if already connected (loopback on localhost)
+                    if (data.Length == 1 && data[0] == 0xFF && State == ConnectionState.Connected)
+                    {
                         continue;
                     }
 
