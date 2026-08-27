@@ -393,6 +393,7 @@ namespace LABANAN
             currentState.timer = roundTimerSeconds;
             currentState.timerFrameCounter = 0;
             currentState.isGameOver = false;
+            currentState.wasDraw = false;
             currentState.showBlueWin = false;
             currentState.showRedWin = false;
             currentState.winDisplayTimerFrames = 0;
@@ -415,6 +416,14 @@ namespace LABANAN
             currentState.player2Wins = 0;
             currentState.timer = roundTimerSeconds;
             currentState.timerFrameCounter = 0;
+            currentState.isGameOver = false;
+            currentState.hitStopFrames = 0;
+            currentState.postWinPause = 0;
+            currentState.preWinPause = 0;
+            currentState.wasDraw = false;
+            currentState.showBlueWin = false;
+            currentState.showRedWin = false;
+            currentState.winDisplayTimerFrames = 0;
             currentState.player1 = PlayerState.CreateDefault(P1_SPAWN_X, P1_SPAWN_Y, false);
             currentState.player2 = PlayerState.CreateDefault(P2_SPAWN_X, P2_SPAWN_Y, true);
         }

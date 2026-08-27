@@ -1125,6 +1125,7 @@ namespace LABANAN
                 if (NetworkManager.Instance != null &&
                     NetworkManager.Instance.State == NetworkManager.ConnectionState.Connected)
                 {
+                    NetworkManager.Instance.RecordLocalInput(currentFrame, localInput);
                     NetworkManager.Instance.GetRemoteInput(currentFrame, out remoteInput);
                 }
 
@@ -1254,6 +1255,8 @@ namespace LABANAN
 
             if (state.showRedWin && !state.showBlueWin && !prevShowRedWin)
                 AudioManager.Instance.PlayRedWin();
+            if (state.showBlueWin && !state.showRedWin && !prevShowBlueWin)
+                AudioManager.Instance.PlayRedWin();
             if (state.showRedWin && state.showBlueWin && !prevShowRedWin)
                 AudioManager.Instance.PlayDraw();
 
@@ -1316,16 +1319,21 @@ namespace LABANAN
                 showP2Stamina.gameObject.SetActive(showHUD);
             }
 
+            var leftWins = hudSwap ? state.player2Wins : state.player1Wins;
+            var rightWins = hudSwap ? state.player1Wins : state.player2Wins;
+            var leftColor = hudSwap ? new Color(0.3f, 0.6f, 1f) : Color.red;
+            var rightColor = hudSwap ? Color.red : new Color(0.3f, 0.6f, 1f);
+
             for (int i = 0; i < 3; i++)
             {
                 if (p1WinDots[i] != null)
                 {
-                    p1WinDots[i].color = i < state.player1Wins ? Color.red : new Color(0.3f, 0.3f, 0.3f);
+                    p1WinDots[i].color = i < leftWins ? leftColor : new Color(0.3f, 0.3f, 0.3f);
                     p1WinDots[i].gameObject.SetActive(showHUD);
                 }
                 if (p2WinDots[i] != null)
                 {
-                    p2WinDots[i].color = i < state.player2Wins ? new Color(0.3f, 0.6f, 1f) : new Color(0.3f, 0.3f, 0.3f);
+                    p2WinDots[i].color = i < rightWins ? rightColor : new Color(0.3f, 0.3f, 0.3f);
                     p2WinDots[i].gameObject.SetActive(showHUD);
                 }
             }

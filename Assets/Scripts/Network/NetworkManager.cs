@@ -89,15 +89,23 @@ namespace LABANAN
 
         public void Host()
         {
-            IsHost = true;
-            udpClient = new UdpClient(port);
-            udpClient.Client.ReceiveTimeout = 1000;
-            remoteEndPoint = null;
-            running = true;
-            lastReceiveTimeMs = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds();
-            StartReceiveThread();
-            State = ConnectionState.Connecting;
-            Debug.Log($"Hosting on port {port}");
+            try
+            {
+                IsHost = true;
+                udpClient = new UdpClient(port);
+                udpClient.Client.ReceiveTimeout = 1000;
+                remoteEndPoint = null;
+                running = true;
+                lastReceiveTimeMs = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds();
+                StartReceiveThread();
+                State = ConnectionState.Connecting;
+                Debug.Log($"Hosting on port {port}");
+            }
+            catch (System.Net.Sockets.SocketException e)
+            {
+                Debug.LogError($"Failed to host on port {port}: {e.Message}");
+                State = ConnectionState.Disconnected;
+            }
         }
 
         public void Join(string hostIp)
@@ -344,7 +352,7 @@ namespace LABANAN
 
         public int CheckForRollback(int currentFrame)
         {
-            for (int f = currentFrame - rollbackFrames; f <= currentFrame; f++)
+            for (int f = currentFrame - rollbackFrames; f < currentFrame; f++)
             {
                 if (f >= 0 && remoteInputReceived[f % BUFFER_SIZE])
                 {
