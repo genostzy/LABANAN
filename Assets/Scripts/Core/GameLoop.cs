@@ -78,6 +78,12 @@ namespace LABANAN
         private Text hostIPDisplay;
         private Text statusLabel;
 
+        // Connection pages
+        private GameObject mainMenuPage;
+        private GameObject hostPage;
+        private GameObject joinPage;
+        private InputField joinIPField;
+
         private void Start()
         {
             try
@@ -497,14 +503,110 @@ namespace LABANAN
             canvasScaler.referenceResolution = new Vector2(1920, 1080);
             connectionUIRoot.AddComponent<GraphicRaycaster>();
 
-            // Full-screen menu art, added first so it renders behind every other element
-            // and behind the in-progress scene (this canvas otherwise had no opaque
-            // background, so the stage/players were visible bleeding through the menu).
+            var font = GetFont();
+
+            // ── Main Menu Page ──
+            mainMenuPage = CreatePage(connectionUIRoot.transform, "MainMenuPage");
+            AddMenuBackground(mainMenuPage.transform);
+
+            CreateText(mainMenuPage.transform, "Subtitle", "ONLINE FIGHTING", 24, TextAnchor.MiddleCenter,
+                new Vector2(0.2f, 0.55f), new Vector2(0.8f, 0.65f), new Color(0.6f, 0.6f, 0.6f), font);
+
+            CreateButton(mainMenuPage.transform, "HostBtn", "HOST", 28,
+                new Vector2(0.30f, 0.38f), new Vector2(0.70f, 0.45f), font, () => ShowPage(hostPage));
+
+            CreateButton(mainMenuPage.transform, "JoinBtn", "JOIN", 28,
+                new Vector2(0.30f, 0.28f), new Vector2(0.70f, 0.35f), font, () => ShowPage(joinPage));
+
+            CreateButton(mainMenuPage.transform, "LocalBtn", "LOCAL", 28,
+                new Vector2(0.30f, 0.18f), new Vector2(0.70f, 0.25f), font, () =>
+                {
+                    isLocalGame = true;
+                    OnConnectedToGame();
+                });
+
+            // ── Host Page ──
+            hostPage = CreatePage(connectionUIRoot.transform, "HostPage");
+            AddMenuBackground(hostPage.transform);
+
+            CreateText(hostPage.transform, "HostTitle", "HOSTING", 32, TextAnchor.MiddleCenter,
+                new Vector2(0.2f, 0.62f), new Vector2(0.8f, 0.70f), new Color(1f, 0.4f, 0.4f), font);
+
+            CreateText(hostPage.transform, "HostIPLabel", "Share this IP with your opponent:", 20, TextAnchor.MiddleCenter,
+                new Vector2(0.2f, 0.50f), new Vector2(0.8f, 0.55f), new Color(0.7f, 0.7f, 0.7f), font);
+
+            hostIPDisplay = CreateText(hostPage.transform, "HostIPValue", "", 36, TextAnchor.MiddleCenter,
+                new Vector2(0.15f, 0.40f), new Vector2(0.85f, 0.48f), new Color(0.4f, 1f, 0.4f), font);
+
+            statusLabel = CreateText(hostPage.transform, "HostStatus", "Waiting for opponent...", 20, TextAnchor.MiddleCenter,
+                new Vector2(0.2f, 0.32f), new Vector2(0.8f, 0.37f), Color.yellow, font);
+
+            CreateButton(hostPage.transform, "HostBackBtn", "BACK", 24,
+                new Vector2(0.35f, 0.15f), new Vector2(0.65f, 0.22f), font, () =>
+                {
+                    if (NetworkManager.Instance != null) NetworkManager.Instance.Disconnect();
+                    ShowPage(mainMenuPage);
+                });
+
+            // ── Join Page ──
+            joinPage = CreatePage(connectionUIRoot.transform, "JoinPage");
+            AddMenuBackground(joinPage.transform);
+
+            CreateText(joinPage.transform, "JoinTitle", "JOIN GAME", 32, TextAnchor.MiddleCenter,
+                new Vector2(0.2f, 0.62f), new Vector2(0.8f, 0.70f), new Color(0.4f, 0.6f, 1f), font);
+
+            CreateText(joinPage.transform, "JoinIPLabel", "Enter host IP:", 20, TextAnchor.MiddleRight,
+                new Vector2(0.25f, 0.48f), new Vector2(0.45f, 0.53f), Color.white, font);
+
+            joinIPField = CreateInputField(joinPage.transform, "JoinIPField", ipInput,
+                new Vector2(0.46f, 0.48f), new Vector2(0.70f, 0.53f), font);
+
+            CreateButton(joinPage.transform, "JoinConnectBtn", "CONNECT", 28,
+                new Vector2(0.30f, 0.35f), new Vector2(0.70f, 0.42f), font, () =>
+                {
+                    if (NetworkManager.Instance != null && !string.IsNullOrEmpty(ipInput))
+                    {
+                        NetworkManager.Instance.Join(ipInput);
+                        var st = joinPage.transform.Find("JoinStatus")?.GetComponent<Text>();
+                        if (st != null) st.text = "Connecting...";
+                    }
+                });
+
+            CreateText(joinPage.transform, "JoinStatus", "", 20, TextAnchor.MiddleCenter,
+                new Vector2(0.2f, 0.28f), new Vector2(0.8f, 0.33f), Color.yellow, font);
+
+            CreateButton(joinPage.transform, "JoinBackBtn", "BACK", 24,
+                new Vector2(0.35f, 0.15f), new Vector2(0.65f, 0.22f), font, () => ShowPage(mainMenuPage));
+
+            // ── Start on main menu ──
+            ShowPage(mainMenuPage);
+
+            if (NetworkManager.Instance != null)
+            {
+                NetworkManager.Instance.OnConnected += OnConnectedToGame;
+                NetworkManager.Instance.OnDisconnected += OnDisconnectedFromGame;
+            }
+        }
+
+        private GameObject CreatePage(Transform parent, string name)
+        {
+            var page = new GameObject(name);
+            page.transform.SetParent(parent, false);
+            var rt = page.AddComponent<RectTransform>();
+            rt.anchorMin = Vector2.zero;
+            rt.anchorMax = Vector2.one;
+            rt.offsetMin = Vector2.zero;
+            rt.offsetMax = Vector2.zero;
+            return page;
+        }
+
+        private void AddMenuBackground(Transform parent)
+        {
             var menuTex = Resources.Load<Texture2D>("Sprites/menu");
             if (menuTex != null)
             {
                 var bgObj = new GameObject("Background");
-                bgObj.transform.SetParent(connectionUIRoot.transform, false);
+                bgObj.transform.SetParent(parent, false);
                 var bgRt = bgObj.AddComponent<RectTransform>();
                 bgRt.anchorMin = Vector2.zero;
                 bgRt.anchorMax = Vector2.one;
@@ -515,9 +617,8 @@ namespace LABANAN
                 bgImg.preserveAspect = false;
             }
 
-            // Dark overlay to fully cover the game scene behind the menu
             var overlayObj = new GameObject("DarkOverlay");
-            overlayObj.transform.SetParent(connectionUIRoot.transform, false);
+            overlayObj.transform.SetParent(parent, false);
             var overlayRt = overlayObj.AddComponent<RectTransform>();
             overlayRt.anchorMin = Vector2.zero;
             overlayRt.anchorMax = Vector2.one;
@@ -526,105 +627,82 @@ namespace LABANAN
             var overlayImg = overlayObj.AddComponent<Image>();
             overlayImg.color = new Color(0, 0, 0, 0.6f);
             overlayImg.raycastTarget = false;
+        }
 
-            var font = GetFont();
+        private InputField CreateInputField(Transform parent, string name, string defaultValue,
+            Vector2 anchorMin, Vector2 anchorMax, Font font)
+        {
+            var obj = new GameObject(name);
+            obj.transform.SetParent(parent, false);
+            var rt = obj.AddComponent<RectTransform>();
+            rt.anchorMin = anchorMin;
+            rt.anchorMax = anchorMax;
+            rt.offsetMin = Vector2.zero;
+            rt.offsetMax = Vector2.zero;
+            var bg = obj.AddComponent<Image>();
+            bg.color = new Color(0.15f, 0.15f, 0.15f);
+            var field = obj.AddComponent<InputField>();
 
-            // "LABANAN" is already part of the menu art above, so no separate title label here.
-            CreateText(connectionUIRoot.transform, "Subtitle", "ONLINE FIGHTING", 24, TextAnchor.MiddleCenter,
-                new Vector2(0.2f, 0.55f), new Vector2(0.8f, 0.65f), new Color(0.6f, 0.6f, 0.6f), font);
+            var textObj = new GameObject("Text");
+            textObj.transform.SetParent(obj.transform, false);
+            var textRt = textObj.AddComponent<RectTransform>();
+            textRt.anchorMin = Vector2.zero;
+            textRt.anchorMax = Vector2.one;
+            textRt.offsetMin = new Vector2(8, 0);
+            textRt.offsetMax = new Vector2(-8, 0);
+            var text = textObj.AddComponent<Text>();
+            text.font = font;
+            text.fontSize = 22;
+            text.color = Color.white;
+            text.supportRichText = false;
+            text.alignment = TextAnchor.MiddleLeft;
 
-            var ipLabel = CreateText(connectionUIRoot.transform, "IPLabel", "HOST IP:", 20, TextAnchor.MiddleRight,
-                new Vector2(0.30f, 0.42f), new Vector2(0.42f, 0.47f), Color.white, font);
-
-            var ipFieldObj = new GameObject("IPInputField");
-            ipFieldObj.transform.SetParent(connectionUIRoot.transform, false);
-            var ipRt = ipFieldObj.AddComponent<RectTransform>();
-            ipRt.anchorMin = new Vector2(0.43f, 0.42f);
-            ipRt.anchorMax = new Vector2(0.60f, 0.47f);
-            ipRt.offsetMin = Vector2.zero;
-            ipRt.offsetMax = Vector2.zero;
-            var ipBg = ipFieldObj.AddComponent<Image>();
-            ipBg.color = new Color(0.15f, 0.15f, 0.15f);
-            var ipField = ipFieldObj.AddComponent<InputField>();
-            var ipTextObj = new GameObject("Text");
-            ipTextObj.transform.SetParent(ipFieldObj.transform, false);
-            var ipTextRt = ipTextObj.AddComponent<RectTransform>();
-            ipTextRt.anchorMin = Vector2.zero;
-            ipTextRt.anchorMax = Vector2.one;
-            ipTextRt.offsetMin = new Vector2(8, 0);
-            ipTextRt.offsetMax = new Vector2(-8, 0);
-            var ipText = ipTextObj.AddComponent<Text>();
-            ipText.font = font;
-            ipText.fontSize = 20;
-            ipText.color = Color.white;
-            ipText.supportRichText = false;
-            ipText.alignment = TextAnchor.MiddleLeft;
-            ipText.text = ipInput;
-            var ipPlaceholder = new GameObject("Placeholder");
-            ipPlaceholder.transform.SetParent(ipFieldObj.transform, false);
-            var phRt = ipPlaceholder.AddComponent<RectTransform>();
+            var phObj = new GameObject("Placeholder");
+            phObj.transform.SetParent(obj.transform, false);
+            var phRt = phObj.AddComponent<RectTransform>();
             phRt.anchorMin = Vector2.zero;
             phRt.anchorMax = Vector2.one;
             phRt.offsetMin = new Vector2(8, 0);
             phRt.offsetMax = new Vector2(-8, 0);
-            var phText = ipPlaceholder.AddComponent<Text>();
-            phText.font = font;
-            phText.fontSize = 20;
-            phText.fontStyle = FontStyle.Italic;
-            phText.color = new Color(0.5f, 0.5f, 0.5f);
-            phText.alignment = TextAnchor.MiddleLeft;
-            phText.text = "Enter IP...";
-            ipField.textComponent = ipText;
-            ipField.placeholder = phText;
-            ipField.text = ipInput;
-            ipField.onValueChanged.AddListener((val) => ipInput = val);
+            var ph = phObj.AddComponent<Text>();
+            ph.font = font;
+            ph.fontSize = 22;
+            ph.fontStyle = FontStyle.Italic;
+            ph.color = new Color(0.5f, 0.5f, 0.5f);
+            ph.alignment = TextAnchor.MiddleLeft;
+            ph.text = "Enter IP...";
 
-            CreateButton(connectionUIRoot.transform, "HostBtn", "HOST", 28,
-                new Vector2(0.30f, 0.28f), new Vector2(0.45f, 0.34f), font, () =>
-                {
-                    if (NetworkManager.Instance != null)
-                    {
-                        NetworkManager.Instance.Host();
-                        string localIP = GetLocalIPAddress();
-                        if (hostIPDisplay != null)
-                        {
-                            hostIPDisplay.text = $"Your IP: {localIP}";
-                            hostIPDisplay.gameObject.SetActive(true);
-                        }
-                        if (statusLabel != null)
-                            statusLabel.text = "Waiting for opponent...";
-                    }
-                });
+            field.textComponent = text;
+            field.placeholder = ph;
+            field.text = defaultValue;
+            field.onValueChanged.AddListener((val) => ipInput = val);
+            return field;
+        }
 
-            CreateButton(connectionUIRoot.transform, "JoinBtn", "JOIN", 28,
-                new Vector2(0.55f, 0.28f), new Vector2(0.70f, 0.34f), font, () =>
-                {
-                    if (NetworkManager.Instance != null && !string.IsNullOrEmpty(ipInput))
-                    {
-                        NetworkManager.Instance.Join(ipInput);
-                        if (statusLabel != null)
-                            statusLabel.text = "Connecting...";
-                    }
-                });
+        private void ShowPage(GameObject page)
+        {
+            mainMenuPage.SetActive(page == mainMenuPage);
+            hostPage.SetActive(page == hostPage);
+            joinPage.SetActive(page == joinPage);
 
-            CreateButton(connectionUIRoot.transform, "LocalBtn", "LOCAL", 28,
-                new Vector2(0.40f, 0.18f), new Vector2(0.60f, 0.24f), font, () =>
-                {
-                    isLocalGame = true;
-                    OnConnectedToGame();
-                });
-
-            statusLabel = CreateText(connectionUIRoot.transform, "StatusText", "", 20, TextAnchor.MiddleCenter,
-                new Vector2(0.2f, 0.10f), new Vector2(0.8f, 0.15f), Color.yellow, font);
-
-            hostIPDisplay = CreateText(connectionUIRoot.transform, "HostIPDisplay", "", 22, TextAnchor.MiddleCenter,
-                new Vector2(0.2f, 0.03f), new Vector2(0.8f, 0.08f), new Color(0.4f, 1f, 0.4f), font);
-            hostIPDisplay.gameObject.SetActive(false);
-
-            if (NetworkManager.Instance != null)
+            if (page == hostPage)
             {
-                NetworkManager.Instance.OnConnected += OnConnectedToGame;
-                NetworkManager.Instance.OnDisconnected += OnDisconnectedFromGame;
+                string localIP = GetLocalIPAddress();
+                if (hostIPDisplay != null) hostIPDisplay.text = localIP;
+                if (statusLabel != null) statusLabel.text = "Waiting for opponent...";
+                if (NetworkManager.Instance != null) NetworkManager.Instance.Host();
+            }
+
+            if (page == joinPage)
+            {
+                var st = joinPage.transform.Find("JoinStatus")?.GetComponent<Text>();
+                if (st != null) st.text = "";
+                if (joinIPField != null) joinIPField.text = ipInput;
+            }
+
+            if (page == mainMenuPage)
+            {
+                if (AudioManager.Instance != null) AudioManager.Instance.StopMusic();
             }
         }
 
@@ -669,6 +747,11 @@ namespace LABANAN
             Debug.Log("Game started from connection!");
         }
 
+        private bool IsLocalHost()
+        {
+            return isLocalGame || (NetworkManager.Instance != null && NetworkManager.Instance.IsHost);
+        }
+
         private static string GetLocalIPAddress()
         {
             try
@@ -690,10 +773,11 @@ namespace LABANAN
             disconnectedTimer = 3f;
             showConnectionUI = true;
             gameStarted = false;
+            isLocalGame = false;
             if (connectionUIRoot != null) connectionUIRoot.SetActive(true);
             if (hudRoot != null) hudRoot.SetActive(false);
-            if (hostIPDisplay != null) hostIPDisplay.gameObject.SetActive(false);
-            if (statusLabel != null) statusLabel.text = "";
+            if (AudioManager.Instance != null) AudioManager.Instance.StopMusic();
+            ShowPage(mainMenuPage);
         }
 
         private void OnAgainClicked()
@@ -716,6 +800,7 @@ namespace LABANAN
         {
             if (gameOverCanvas != null) gameOverCanvas.SetActive(false);
             gameStarted = false;
+            isLocalGame = false;
             prevIsGameOver = false;
             showConnectionUI = true;
             if (connectionUIRoot != null) connectionUIRoot.SetActive(true);
@@ -727,6 +812,7 @@ namespace LABANAN
             {
                 NetworkManager.Instance.Disconnect();
             }
+            ShowPage(mainMenuPage);
             Debug.Log("Returned to connection screen.");
         }
 
@@ -952,25 +1038,39 @@ namespace LABANAN
             if (player2Sprite != null)
             {
                 player2Sprite.enabled = true;
+
+                // Online joiner: swap visuals so local player is on the left
+                bool swap = !isLocalGame && !IsLocalHost();
+
+                PlayerState visualP2 = swap ? state.player1 : state.player2;
+                Sprite[][] blueSpr = swap ? redSprites : blueSprites;
+                int blueR = swap ? redRows : blueRows;
+
                 Vector3 targetP2 = new Vector3(
-                    FixedMath.ToFloat(state.player2.x),
-                    FixedMath.ToFloat(state.player2.y), 0);
+                    FixedMath.ToFloat(visualP2.x),
+                    FixedMath.ToFloat(visualP2.y), 0);
                 player2Sprite.transform.position = Vector3.Lerp(prevP2VisualPos, targetP2, 0.3f);
                 prevP2VisualPos = player2Sprite.transform.position;
                 player2Sprite.flipX = false;
-                var sprite = GetSprite(blueSprites, blueRows, state.player2.animState, state.player2.animIndex);
+                var sprite = GetSprite(blueSpr, blueR, visualP2.animState, visualP2.animIndex);
                 if (sprite != null) player2Sprite.sprite = sprite;
             }
 
             if (player1Sprite != null)
             {
+                bool swap = !isLocalGame && !IsLocalHost();
+
+                PlayerState visualP1 = swap ? state.player2 : state.player1;
+                Sprite[][] redSpr = swap ? blueSprites : redSprites;
+                int redR = swap ? blueRows : redRows;
+
                 Vector3 targetP1 = new Vector3(
-                    FixedMath.ToFloat(state.player1.x),
-                    FixedMath.ToFloat(state.player1.y), 0);
+                    FixedMath.ToFloat(visualP1.x),
+                    FixedMath.ToFloat(visualP1.y), 0);
                 player1Sprite.transform.position = Vector3.Lerp(prevP1VisualPos, targetP1, 0.3f);
                 prevP1VisualPos = player1Sprite.transform.position;
                 player1Sprite.flipX = false;
-                var sprite = GetSprite(redSprites, redRows, state.player1.animState, state.player1.animIndex);
+                var sprite = GetSprite(redSpr, redR, visualP1.animState, visualP1.animIndex);
                 if (sprite != null) player1Sprite.sprite = sprite;
             }
 
@@ -1049,20 +1149,40 @@ namespace LABANAN
                 roundText.gameObject.SetActive(showHUD);
             }
 
-            if (p1HealthBar != null) { p1HealthBar.fillAmount = (float)state.player1.health / PlayerController.MAX_HEALTH; p1HealthBar.gameObject.SetActive(showHUD); }
-            if (p2HealthBar != null) { p2HealthBar.fillAmount = (float)state.player2.health / PlayerController.MAX_HEALTH; p2HealthBar.gameObject.SetActive(showHUD); }
+            // Online joiner: swap HUD elements so local player is always on the left
+            bool hudSwap = !isLocalGame && !IsLocalHost();
 
-            if (p1StaminaBar != null)
+            var showP1Health = hudSwap ? p2HealthBar : p1HealthBar;
+            var showP2Health = hudSwap ? p1HealthBar : p2HealthBar;
+            var showP1Frame = hudSwap ? p2HealthFrame : p1HealthFrame;
+            var showP2Frame = hudSwap ? p1HealthFrame : p2HealthFrame;
+            var showP1Stamina = hudSwap ? p2StaminaBar : p1StaminaBar;
+            var showP2Stamina = hudSwap ? p1StaminaBar : p2StaminaBar;
+            var showP1Name = hudSwap ? p2NameTag : p1NameTag;
+            var showP2Name = hudSwap ? p1NameTag : p2NameTag;
+            var showP1Cooldown = hudSwap ? p2CooldownText : p1CooldownText;
+            var showP2Cooldown = hudSwap ? p1CooldownText : p2CooldownText;
+
+            // Health
+            var p1Health = hudSwap ? state.player2 : state.player1;
+            var p2Health = hudSwap ? state.player1 : state.player2;
+            if (showP1Health != null) { showP1Health.fillAmount = (float)p1Health.health / PlayerController.MAX_HEALTH; showP1Health.gameObject.SetActive(showHUD); }
+            if (showP2Health != null) { showP2Health.fillAmount = (float)p2Health.health / PlayerController.MAX_HEALTH; showP2Health.gameObject.SetActive(showHUD); }
+
+            // Stamina
+            var p1Stam = hudSwap ? state.player2 : state.player1;
+            var p2Stam = hudSwap ? state.player1 : state.player2;
+            if (showP1Stamina != null)
             {
-                p1StaminaBar.fillAmount = (float)state.player1.stamina / PlayerController.MAX_STAMINA;
-                p1StaminaBar.color = state.player1.slowTimer > 0 ? new Color(0.5f, 0.3f, 1f) : new Color(0.2f, 0.8f, 0.2f);
-                p1StaminaBar.gameObject.SetActive(showHUD);
+                showP1Stamina.fillAmount = (float)p1Stam.stamina / PlayerController.MAX_STAMINA;
+                showP1Stamina.color = p1Stam.slowTimer > 0 ? new Color(0.5f, 0.3f, 1f) : new Color(0.2f, 0.8f, 0.2f);
+                showP1Stamina.gameObject.SetActive(showHUD);
             }
-            if (p2StaminaBar != null)
+            if (showP2Stamina != null)
             {
-                p2StaminaBar.fillAmount = (float)state.player2.stamina / PlayerController.MAX_STAMINA;
-                p2StaminaBar.color = state.player2.slowTimer > 0 ? new Color(0.5f, 0.3f, 1f) : new Color(0.2f, 0.8f, 0.2f);
-                p2StaminaBar.gameObject.SetActive(showHUD);
+                showP2Stamina.fillAmount = (float)p2Stam.stamina / PlayerController.MAX_STAMINA;
+                showP2Stamina.color = p2Stam.slowTimer > 0 ? new Color(0.5f, 0.3f, 1f) : new Color(0.2f, 0.8f, 0.2f);
+                showP2Stamina.gameObject.SetActive(showHUD);
             }
 
             for (int i = 0; i < 3; i++)
@@ -1079,20 +1199,23 @@ namespace LABANAN
                 }
             }
 
-            if (p1CooldownText != null)
+            // Cooldowns
+            var cdP1 = hudSwap ? state.player2 : state.player1;
+            var cdP2 = hudSwap ? state.player1 : state.player2;
+            if (showP1Cooldown != null)
             {
-                p1CooldownText.text = $"J:{CdStr(state.player1.attackCooldownLeft)}  K:{CdStr(state.player1.sungkitCooldownLeft)}  L:{CdStr(state.player1.launchCooldownLeft)}";
-                p1CooldownText.gameObject.SetActive(showHUD);
+                showP1Cooldown.text = $"J:{CdStr(cdP1.attackCooldownLeft)}  K:{CdStr(cdP1.sungkitCooldownLeft)}  L:{CdStr(cdP1.launchCooldownLeft)}";
+                showP1Cooldown.gameObject.SetActive(showHUD);
             }
-            if (p2CooldownText != null)
+            if (showP2Cooldown != null)
             {
-                p2CooldownText.text = $"Num1:{CdStr(state.player2.attackCooldownLeft)}  Num2:{CdStr(state.player2.sungkitCooldownLeft)}  Num3:{CdStr(state.player2.launchCooldownLeft)}";
-                p2CooldownText.gameObject.SetActive(showHUD);
+                showP2Cooldown.text = $"J:{CdStr(cdP2.attackCooldownLeft)}  K:{CdStr(cdP2.sungkitCooldownLeft)}  L:{CdStr(cdP2.launchCooldownLeft)}";
+                showP2Cooldown.gameObject.SetActive(showHUD);
             }
-            if (p1NameTag != null) p1NameTag.gameObject.SetActive(showHUD);
-            if (p2NameTag != null) p2NameTag.gameObject.SetActive(showHUD);
-            if (p1HealthFrame != null) p1HealthFrame.gameObject.SetActive(showHUD);
-            if (p2HealthFrame != null) p2HealthFrame.gameObject.SetActive(showHUD);
+            if (showP1Name != null) showP1Name.gameObject.SetActive(showHUD);
+            if (showP2Name != null) showP2Name.gameObject.SetActive(showHUD);
+            if (showP1Frame != null) showP1Frame.gameObject.SetActive(showHUD);
+            if (showP2Frame != null) showP2Frame.gameObject.SetActive(showHUD);
 
             if (redWinOverlay != null) redWinOverlay.gameObject.SetActive(state.showRedWin);
             if (blueWinOverlay != null) blueWinOverlay.gameObject.SetActive(state.showBlueWin);
@@ -1155,6 +1278,18 @@ namespace LABANAN
             if (v1 > STICK_THRESHOLD) localInput.buttons |= InputData.UP;
             if (v1 < -STICK_THRESHOLD) localInput.buttons |= InputData.DOWN;
             if (Input.GetKey(KeyCode.Joystick1Button4)) localInput.buttons |= InputData.BLOCK;
+
+            // Online joiner: mirror left/right so your character moves correctly on your screen
+            if (!isLocalGame && NetworkManager.Instance != null &&
+                NetworkManager.Instance.State == NetworkManager.ConnectionState.Connected &&
+                !NetworkManager.Instance.IsHost)
+            {
+                bool hadLeft = (localInput.buttons & InputData.LEFT) != 0;
+                bool hadRight = (localInput.buttons & InputData.RIGHT) != 0;
+                localInput.buttons &= (byte)~(InputData.LEFT | InputData.RIGHT);
+                if (hadLeft) localInput.buttons |= InputData.RIGHT;
+                if (hadRight) localInput.buttons |= InputData.LEFT;
+            }
         }
 
         // Couch multiplayer: player 2's movement, sharing the same keyboard (arrows + numpad)
