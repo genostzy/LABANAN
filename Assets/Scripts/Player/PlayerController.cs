@@ -30,6 +30,7 @@ namespace LABANAN
         public const int SWORD_STAMINA_COST = 10;
         public const int SUNGKIT_STAMINA_COST = 20;
         public const int LAUNCH_STAMINA_COST = 35;
+        public const int JUMP_STAMINA_COST = 8;
 
         // ── Body ──
         public const int BODY_WIDTH = 640;
@@ -205,11 +206,12 @@ namespace LABANAN
             }
 
             // Jump
-            if (input.HasUp && state.isOnGround && state.jumpCooldownLeft <= 0 && !state.blocking)
+            if (input.HasUp && state.isOnGround && state.jumpCooldownLeft <= 0 && !state.blocking && state.stamina >= JUMP_STAMINA_COST)
             {
                 state.yVelocity = JUMP_FORCE;
                 state.isOnGround = false;
                 state.jumping = true;
+                state.stamina -= JUMP_STAMINA_COST;
                 state.jumpCooldownLeft = JUMP_COOLDOWN;
             }
 
