@@ -1207,30 +1207,35 @@ namespace LABANAN
 
             if (player1Sprite != null)
             {
-                float p1x = FixedMath.ToFloat(state.player1.x);
-                float p2x = FixedMath.ToFloat(state.player2.x);
-                float midX = (p1x + p2x) * 0.5f;
-                float distBetween = Mathf.Abs(p1x - p2x);
+                float midX = (FixedMath.ToFloat(state.player1.x) + FixedMath.ToFloat(state.player2.x)) * 0.5f;
+                float midY = (FixedMath.ToFloat(state.player1.y) + FixedMath.ToFloat(state.player2.y)) * 0.5f;
+                float playerY = midY;
+                float baseCamY = 1.5f;
+                float camY = baseCamY + playerY * 0.3f;
+                float baseOrtho = 3.5f;
+                float orthoSize = baseOrtho + Mathf.Abs(playerY - baseCamY) * 0.5f;
+                float distBetween = Mathf.Abs(FixedMath.ToFloat(state.player1.x) - FixedMath.ToFloat(state.player2.x));
+                float minOrtho = Mathf.Max(3.5f, distBetween * 0.12f + 2f);
+                orthoSize = Mathf.Clamp(orthoSize, minOrtho, 8f);
 
-                // Tekken-style: fixed Y, camera only pans horizontally and zooms
-                float camY = 3.5f;
-                float orthoSize = 5f;
+                float camX = midX;
 
                 if (state.roundStartTimer > 0)
                 {
-                    // Pre-round: zoom in on center
-                    orthoSize = Mathf.Lerp(mainCam.orthographicSize, 3f, 0.08f);
-                    midX = Mathf.Lerp(mainCam.transform.position.x, midX, 0.08f);
+                    float midXstart = midX;
+                    float midYstart = midY + 0.5f;
+                    camX = Mathf.Lerp(mainCam.transform.position.x, midXstart, 0.08f);
+                    camY = Mathf.Lerp(mainCam.transform.position.y, midYstart, 0.08f);
+                    orthoSize = Mathf.Lerp(mainCam.orthographicSize, 2.2f, 0.08f);
                 }
                 else
                 {
-                    // Dynamic zoom based on distance between players
-                    float targetOrtho = Mathf.Clamp(distBetween * 0.18f + 3f, 4f, 9f);
-                    orthoSize = Mathf.Lerp(mainCam.orthographicSize, targetOrtho, 0.1f);
-                    midX = Mathf.Lerp(mainCam.transform.position.x, midX, 0.12f);
+                    camX = Mathf.Lerp(mainCam.transform.position.x, midX, 0.15f);
+                    camY = Mathf.Lerp(mainCam.transform.position.y, camY, 0.15f);
+                    orthoSize = Mathf.Lerp(mainCam.orthographicSize, orthoSize, 0.15f);
                 }
 
-                mainCam.transform.position = new Vector3(midX, camY, -10f);
+                mainCam.transform.position = new Vector3(camX, camY, -10f);
                 mainCam.orthographicSize = orthoSize;
             }
 
