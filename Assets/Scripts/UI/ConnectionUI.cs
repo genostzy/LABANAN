@@ -24,7 +24,7 @@ namespace LABANAN
 
             NetworkManager.ConnectionState state = NetworkManager.Instance.State;
             int ping = NetworkManager.Instance.PingMs;
-            bool isRollingBack = NetworkManager.Instance.IsRollingBack;
+            bool isRollingBack = NetworkManager.Instance.Rollback.RollbackCount > 0;
 
             // Update ping display
             if (pingText != null)
