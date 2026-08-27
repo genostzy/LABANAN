@@ -7,6 +7,8 @@ namespace LABANAN
 {
     public class GameLoop : MonoBehaviour
     {
+        public static GameLoop Instance { get; private set; }
+
         [Header("Settings")]
         public int targetTickRate = 60;
         public bool showDebugInfo = true;
@@ -92,6 +94,9 @@ namespace LABANAN
 
         private void Start()
         {
+            if (Instance != null && Instance != this) { Destroy(gameObject); return; }
+            Instance = this;
+
             tickInterval = 1f / targetTickRate;
             mainCam = Camera.main;
             if (mainCam != null)
@@ -1196,7 +1201,7 @@ namespace LABANAN
                     FixedMath.ToFloat(visualP2.y), 0);
                 player2Sprite.transform.position = Vector3.Lerp(prevP2VisualPos, targetP2, 0.6f);
                 prevP2VisualPos = player2Sprite.transform.position;
-                player2Sprite.flipX = false;
+                player2Sprite.flipX = true;
                 var sprite = GetSprite(blueSpr, blueR, visualP2.animState, visualP2.animIndex);
                 if (sprite != null) player2Sprite.sprite = sprite;
             }
