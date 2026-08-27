@@ -1286,7 +1286,7 @@ namespace LABANAN
             {
                 bool hadLeft = (localInput.buttons & InputData.LEFT) != 0;
                 bool hadRight = (localInput.buttons & InputData.RIGHT) != 0;
-                localInput.buttons &= (byte)~(InputData.LEFT | InputData.RIGHT);
+                localInput.buttons &= unchecked((byte)~(InputData.LEFT | InputData.RIGHT));
                 if (hadLeft) localInput.buttons |= InputData.RIGHT;
                 if (hadRight) localInput.buttons |= InputData.LEFT;
             }
