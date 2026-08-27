@@ -1,5 +1,7 @@
 using UnityEngine;
 using UnityEngine.UI;
+using System.Net;
+using System.Net.Sockets;
 
 namespace LABANAN
 {
@@ -73,6 +75,8 @@ namespace LABANAN
         private string ipInput = "127.0.0.1";
         private GameObject connectionUIRoot;
         private GameObject hudRoot;
+        private Text hostIPDisplay;
+        private Text statusLabel;
 
         private void Start()
         {
@@ -581,8 +585,14 @@ namespace LABANAN
                     if (NetworkManager.Instance != null)
                     {
                         NetworkManager.Instance.Host();
-                        // Wait for the real handshake (NetworkManager.OnConnected, subscribed below)
-                        // instead of starting the match immediately, matching the JoinBtn flow.
+                        string localIP = GetLocalIPAddress();
+                        if (hostIPDisplay != null)
+                        {
+                            hostIPDisplay.text = $"Your IP: {localIP}";
+                            hostIPDisplay.gameObject.SetActive(true);
+                        }
+                        if (statusLabel != null)
+                            statusLabel.text = "Waiting for opponent...";
                     }
                 });
 
@@ -592,6 +602,8 @@ namespace LABANAN
                     if (NetworkManager.Instance != null && !string.IsNullOrEmpty(ipInput))
                     {
                         NetworkManager.Instance.Join(ipInput);
+                        if (statusLabel != null)
+                            statusLabel.text = "Connecting...";
                     }
                 });
 
@@ -602,8 +614,12 @@ namespace LABANAN
                     OnConnectedToGame();
                 });
 
-            CreateText(connectionUIRoot.transform, "StatusText", "", 20, TextAnchor.MiddleCenter,
+            statusLabel = CreateText(connectionUIRoot.transform, "StatusText", "", 20, TextAnchor.MiddleCenter,
                 new Vector2(0.2f, 0.10f), new Vector2(0.8f, 0.15f), Color.yellow, font);
+
+            hostIPDisplay = CreateText(connectionUIRoot.transform, "HostIPDisplay", "", 22, TextAnchor.MiddleCenter,
+                new Vector2(0.2f, 0.03f), new Vector2(0.8f, 0.08f), new Color(0.4f, 1f, 0.4f), font);
+            hostIPDisplay.gameObject.SetActive(false);
 
             if (NetworkManager.Instance != null)
             {
@@ -653,6 +669,21 @@ namespace LABANAN
             Debug.Log("Game started from connection!");
         }
 
+        private static string GetLocalIPAddress()
+        {
+            try
+            {
+                var host = Dns.GetHostEntry(Dns.GetHostName());
+                foreach (var ip in host.AddressList)
+                {
+                    if (ip.AddressFamily == AddressFamily.InterNetwork)
+                        return ip.ToString();
+                }
+            }
+            catch { }
+            return "127.0.0.1";
+        }
+
         private void OnDisconnectedFromGame()
         {
             showDisconnectedMsg = true;
@@ -661,6 +692,8 @@ namespace LABANAN
             gameStarted = false;
             if (connectionUIRoot != null) connectionUIRoot.SetActive(true);
             if (hudRoot != null) hudRoot.SetActive(false);
+            if (hostIPDisplay != null) hostIPDisplay.gameObject.SetActive(false);
+            if (statusLabel != null) statusLabel.text = "";
         }
 
         private void OnAgainClicked()
@@ -717,9 +750,8 @@ namespace LABANAN
                 if (NetworkManager.Instance != null &&
                     NetworkManager.Instance.State == NetworkManager.ConnectionState.Connecting)
                 {
-                    var statusText = connectionUIRoot?.transform.Find("StatusText")?.GetComponent<Text>();
-                    if (statusText != null)
-                        statusText.text = "Waiting for opponent...";
+                    if (statusLabel != null)
+                        statusLabel.text = "Waiting for opponent...";
                 }
 
                 return;
