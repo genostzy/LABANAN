@@ -1213,8 +1213,12 @@ namespace LABANAN
             {
                 GameState state = GameManager.Instance.currentState;
                 var p1 = state.player1;
+                var p2 = state.player2;
                 GUI.Label(new Rect(10, y, 900, lh),
-                    $"P1: hp={p1.health} stm={p1.stamina} slow={p1.slowTimer} blkTmr={p1.blockTimer} gnd={p1.isOnGround} anim={p1.animState}[{p1.animIndex}]");
+                    $"P1: hp={p1.health} stm={p1.stamina} slow={p1.slowTimer} blkTmr={p1.blockTimer} gnd={p1.isOnGround} anim={p1.animState}[{p1.animIndex}] pos=({p1.x},{p1.y})");
+                y += lh;
+                GUI.Label(new Rect(10, y, 900, lh),
+                    $"P2: hp={p2.health} stm={p2.stamina} slow={p2.slowTimer} blkTmr={p2.blockTimer} gnd={p2.isOnGround} anim={p2.animState}[{p2.animIndex}] pos=({p2.x},{p2.y})");
                 y += lh;
                 GUI.Label(new Rect(10, y, 500, lh), $"Round: {state.round}  Timer: {state.timer}  Wins: P1={state.player1Wins} P2={state.player2Wins}  First to {GameManager.Instance.winsNeeded}");
                 y += lh;
@@ -1226,23 +1230,54 @@ namespace LABANAN
         private void DrawHitboxes(GameState state)
         {
             if (mainCam == null) return;
+
+            // Platform collision rects (cyan, thin outline)
+            var plat = GameManager.Instance?.Platforms;
+            if (plat != null)
+            {
+                DrawPlatformCollision(plat.MainX, plat.MainWidth, plat.MainY, new Color(0f, 1f, 1f, 0.25f));
+                DrawPlatformCollision(plat.LeftX, plat.LeftWidth, plat.LeftY, new Color(0f, 1f, 1f, 0.25f));
+                DrawPlatformCollision(plat.RightX, plat.RightWidth, plat.RightY, new Color(0f, 1f, 1f, 0.25f));
+            }
+
+            // Player 1 body hitbox (green)
             DrawPlayerHitbox(state.player1, Color.green);
-            DrawAttackHitbox(state.player1, Color.red);
+            // Player 1 attack hitbox (red)
+            DrawAttackHitbox(state.player1, new Color(1f, 0.2f, 0.2f));
+
+            // Player 2 body hitbox (blue)
+            DrawPlayerHitbox(state.player2, new Color(0.3f, 0.6f, 1f));
+            // Player 2 attack hitbox (yellow)
+            DrawAttackHitbox(state.player2, Color.yellow);
+        }
+
+        private void DrawPlatformCollision(int platX, int platWidth, int platY, Color fillColor)
+        {
+            // platX, platWidth, platY are in fixed-point (÷1000 for world units)
+            float x = FixedMath.ToFloat(platX);
+            float w = FixedMath.ToFloat(platWidth);
+            float y = FixedMath.ToFloat(platY);
+            // Draw as a thin horizontal line at the top surface + a faint filled rect below
+            Rect surface = new Rect(x, y - 0.1f, w, 0.1f);
+            DrawRectFilled(surface, fillColor);
+            // Also draw a wireframe outline of the full collision area
+            Rect full = new Rect(x, y - 1.0f, w, 1.0f);
+            DrawRectOutline(full, new Color(fillColor.r, fillColor.g, fillColor.b, 0.7f));
         }
 
         private void DrawPlayerHitbox(PlayerState player, Color color)
         {
-            DrawRect(PlayerController.GetPlayerHitbox(player), color, 0.3f);
+            DrawRectOutline(PlayerController.GetPlayerHitbox(player), color);
         }
 
         private void DrawAttackHitbox(PlayerState player, Color color)
         {
             if (!player.attacking && !player.sungkit && !player.launch) return;
             Rect hitbox = PlayerController.GetAttackHitbox(player);
-            if (hitbox.width > 0 && hitbox.height > 0) DrawRect(hitbox, color, 0.5f);
+            if (hitbox.width > 0 && hitbox.height > 0) DrawRectFilled(hitbox, color);
         }
 
-        private void DrawRect(Rect worldRect, Color color, float alpha)
+        private void DrawRectFilled(Rect worldRect, Color color)
         {
             Vector3 bl = mainCam.WorldToScreenPoint(new Vector3(worldRect.x, worldRect.y, 0));
             Vector3 tr = mainCam.WorldToScreenPoint(new Vector3(worldRect.x + worldRect.width, worldRect.y + worldRect.height, 0));
@@ -1250,11 +1285,38 @@ namespace LABANAN
             float yScreen = Screen.height - Mathf.Max(bl.y, tr.y);
             float w = Mathf.Abs(tr.x - bl.x);
             float h = Mathf.Abs(tr.y - bl.y);
+            if (w < 1f) w = 1f;
+            if (h < 1f) h = 1f;
 
-            var tex = new Texture2D(1, 1);
-            tex.SetPixel(0, 0, new Color(color.r, color.g, color.b, alpha));
-            tex.Apply();
-            GUI.DrawTexture(new Rect(x, yScreen, w, h), tex);
+            if (debugTex == null) { debugTex = new Texture2D(1, 1); debugTex.SetPixel(0, 0, Color.white); debugTex.Apply(); }
+            var prevColor = GUI.color;
+            GUI.color = color;
+            GUI.DrawTexture(new Rect(x, yScreen, w, h), debugTex);
+            GUI.color = prevColor;
         }
+
+        private void DrawRectOutline(Rect worldRect, Color color)
+        {
+            Vector3 bl = mainCam.WorldToScreenPoint(new Vector3(worldRect.x, worldRect.y, 0));
+            Vector3 tr = mainCam.WorldToScreenPoint(new Vector3(worldRect.x + worldRect.width, worldRect.y + worldRect.height, 0));
+            float x = Mathf.Min(bl.x, tr.x);
+            float yScreen = Screen.height - Mathf.Max(bl.y, tr.y);
+            float w = Mathf.Abs(tr.x - bl.x);
+            float h = Mathf.Abs(tr.y - bl.y);
+            if (w < 1f) w = 1f;
+            if (h < 1f) h = 1f;
+
+            if (debugTex == null) { debugTex = new Texture2D(1, 1); debugTex.SetPixel(0, 0, Color.white); debugTex.Apply(); }
+            var prevColor = GUI.color;
+            GUI.color = color;
+            float t = 2f; // outline thickness in pixels
+            GUI.DrawTexture(new Rect(x, yScreen, w, t), debugTex);       // top
+            GUI.DrawTexture(new Rect(x, yScreen + h - t, w, t), debugTex); // bottom
+            GUI.DrawTexture(new Rect(x, yScreen, t, h), debugTex);       // left
+            GUI.DrawTexture(new Rect(x + w - t, yScreen, t, h), debugTex); // right
+            GUI.color = prevColor;
+        }
+
+        private static Texture2D debugTex;
     }
 }
