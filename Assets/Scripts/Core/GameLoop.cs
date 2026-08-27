@@ -1251,19 +1251,19 @@ namespace LABANAN
             DrawAttackHitbox(state.player2, Color.yellow);
         }
 
-        private void DrawPlatformCollision(int platX, int platWidth, int platY, Color fillColor)
+        private void DrawPlatformCollision(int platX, int platWidth, int platY, Color color)
         {
             float x = FixedMath.ToFloat(platX);
             float w = FixedMath.ToFloat(platWidth);
             float y = FixedMath.ToFloat(platY);
 
-            // Thick surface line at the exact collision surface
+            // Draw a clear horizontal line at the exact collision surface
             Rect surface = new Rect(x, y - 0.05f, w, 0.1f);
-            DrawRectFilled(surface, new Color(fillColor.r, fillColor.g, fillColor.b, 0.9f));
+            DrawRectFilled(surface, new Color(color.r, color.g, color.b, 0.9f));
 
-            // Outline showing 1 unit below the surface (the "solid" area)
-            Rect solid = new Rect(x, y - 1.0f, w, 1.0f);
-            DrawRectOutline(solid, new Color(fillColor.r, fillColor.g, fillColor.b, 0.6f), 3f);
+            // Thin outline just below the surface to show collision depth
+            Rect depth = new Rect(x, y - 0.3f, w, 0.3f);
+            DrawRectOutline(depth, new Color(color.r, color.g, color.b, 0.5f), 2f);
         }
 
         private void DrawPlayerHitbox(PlayerState player, Color color)
