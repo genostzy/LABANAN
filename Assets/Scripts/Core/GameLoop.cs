@@ -84,38 +84,160 @@ namespace LABANAN
         private GameObject joinPage;
         private InputField joinIPField;
 
+        // Loading screen
+        private GameObject loadingCanvas;
+        private Image loadingBarFill;
+        private Text loadingStatusText;
+        private Text loadingPercentText;
+
         private void Start()
         {
-            try
+            tickInterval = 1f / targetTickRate;
+            mainCam = Camera.main;
+            if (mainCam != null)
             {
-                tickInterval = 1f / targetTickRate;
-                mainCam = Camera.main;
-                if (mainCam != null)
-                {
-                    mainCam.clearFlags = CameraClearFlags.SolidColor;
-                    mainCam.backgroundColor = Color.black;
-                }
-
-                if (whiteSprite == null)
-                {
-                    var tex = new Texture2D(4, 4);
-                    var px = new Color[16];
-                    for (int i = 0; i < 16; i++) px[i] = Color.white;
-                    tex.SetPixels(px);
-                    tex.Apply();
-                    whiteSprite = Sprite.Create(tex, new Rect(0, 0, 4, 4), new Vector2(0.5f, 0.5f), 4);
-                }
-
-                LoadSprites();
-                SetupBackground();
-                SetupPlatforms();
-                SetupUI();
-                SetupConnectionUI();
-                Debug.Log("GameLoop.Start() complete");
+                mainCam.clearFlags = CameraClearFlags.SolidColor;
+                mainCam.backgroundColor = Color.black;
             }
-            catch (System.Exception e)
+
+            ShowLoadingScreen();
+            StartCoroutine(LoadGameRoutine());
+        }
+
+        private System.Collections.IEnumerator LoadGameRoutine()
+        {
+            // Step 1: Init white sprite
+            loadingStatusText.text = "Initializing...";
+            loadingBarFill.fillAmount = 0.05f;
+            loadingPercentText.text = "5%";
+            yield return null;
+
+            if (whiteSprite == null)
             {
-                Debug.LogError($"GameLoop.Start() FAILED: {e}");
+                var tex = new Texture2D(4, 4);
+                var px = new Color[16];
+                for (int i = 0; i < 16; i++) px[i] = Color.white;
+                tex.SetPixels(px);
+                tex.Apply();
+                whiteSprite = Sprite.Create(tex, new Rect(0, 0, 4, 4), new Vector2(0.5f, 0.5f), 4);
+            }
+
+            // Step 2: Load sprites
+            loadingStatusText.text = "Loading sprites...";
+            loadingBarFill.fillAmount = 0.2f;
+            loadingPercentText.text = "20%";
+            yield return null;
+
+            LoadSprites();
+
+            // Step 3: Setup background
+            loadingStatusText.text = "Loading background...";
+            loadingBarFill.fillAmount = 0.35f;
+            loadingPercentText.text = "35%";
+            yield return null;
+
+            SetupBackground();
+
+            // Step 4: Setup platforms
+            loadingStatusText.text = "Building stage...";
+            loadingBarFill.fillAmount = 0.5f;
+            loadingPercentText.text = "50%";
+            yield return null;
+
+            SetupPlatforms();
+
+            // Step 5: Setup HUD
+            loadingStatusText.text = "Creating HUD...";
+            loadingBarFill.fillAmount = 0.65f;
+            loadingPercentText.text = "65%";
+            yield return null;
+
+            SetupUI();
+
+            // Step 6: Setup connection UI
+            loadingStatusText.text = "Setting up menus...";
+            loadingBarFill.fillAmount = 0.8f;
+            loadingPercentText.text = "80%";
+            yield return null;
+
+            SetupConnectionUI();
+
+            // Step 7: Done
+            loadingStatusText.text = "Ready!";
+            loadingBarFill.fillAmount = 1f;
+            loadingPercentText.text = "100%";
+            yield return new WaitForSeconds(0.3f);
+
+            HideLoadingScreen();
+            Debug.Log("GameLoop.Start() complete");
+        }
+
+        private void ShowLoadingScreen()
+        {
+            var font = GetFont();
+
+            loadingCanvas = new GameObject("LoadingCanvas");
+            var canvas = loadingCanvas.AddComponent<Canvas>();
+            canvas.renderMode = RenderMode.ScreenSpaceOverlay;
+            canvas.sortingOrder = 200;
+            var scaler = loadingCanvas.AddComponent<CanvasScaler>();
+            scaler.uiScaleMode = CanvasScaler.ScaleMode.ScaleWithScreenSize;
+            scaler.referenceResolution = new Vector2(1920, 1080);
+            loadingCanvas.AddComponent<GraphicRaycaster>();
+
+            // Black background
+            var bg = new GameObject("BG");
+            bg.transform.SetParent(loadingCanvas.transform, false);
+            var bgRt = bg.AddComponent<RectTransform>();
+            bgRt.anchorMin = Vector2.zero;
+            bgRt.anchorMax = Vector2.one;
+            bgRt.offsetMin = Vector2.zero;
+            bgRt.offsetMax = Vector2.zero;
+            var bgImg = bg.AddComponent<Image>();
+            bgImg.color = new Color(0.05f, 0.05f, 0.08f);
+
+            // Title
+            CreateText(loadingCanvas.transform, "Title", "LABANAN", 48, TextAnchor.MiddleCenter,
+                new Vector2(0.2f, 0.65f), new Vector2(0.8f, 0.75f), new Color(1f, 0.3f, 0.3f), font);
+
+            // Loading bar background
+            var barBg = new GameObject("BarBG");
+            barBg.transform.SetParent(loadingCanvas.transform, false);
+            var barBgRt = barBg.AddComponent<RectTransform>();
+            barBgRt.anchorMin = new Vector2(0.25f, 0.40f);
+            barBgRt.anchorMax = new Vector2(0.75f, 0.43f);
+            barBgRt.offsetMin = Vector2.zero;
+            barBgRt.offsetMax = Vector2.zero;
+            var barBgImg = barBg.AddComponent<Image>();
+            barBgImg.color = new Color(0.2f, 0.2f, 0.2f);
+
+            // Loading bar fill
+            var barFill = new GameObject("BarFill");
+            barFill.transform.SetParent(barBg.transform, false);
+            var barFillRt = barFill.AddComponent<RectTransform>();
+            barFillRt.anchorMin = Vector2.zero;
+            barFillRt.anchorMax = Vector2.one;
+            barFillRt.offsetMin = Vector2.zero;
+            barFillRt.offsetMax = Vector2.zero;
+            loadingBarFill = barFill.AddComponent<Image>();
+            loadingBarFill.color = new Color(0.9f, 0.2f, 0.2f);
+            loadingBarFill.fillAmount = 0f;
+
+            // Status text
+            loadingStatusText = CreateText(loadingCanvas.transform, "Status", "Loading...", 22, TextAnchor.MiddleCenter,
+                new Vector2(0.2f, 0.32f), new Vector2(0.8f, 0.37f), new Color(0.7f, 0.7f, 0.7f), font);
+
+            // Percent text
+            loadingPercentText = CreateText(loadingCanvas.transform, "Percent", "0%", 18, TextAnchor.MiddleCenter,
+                new Vector2(0.2f, 0.44f), new Vector2(0.8f, 0.48f), new Color(0.5f, 0.5f, 0.5f), font);
+        }
+
+        private void HideLoadingScreen()
+        {
+            if (loadingCanvas != null)
+            {
+                Destroy(loadingCanvas);
+                loadingCanvas = null;
             }
         }
 
