@@ -173,7 +173,7 @@ namespace LABANAN
         {
             var platTex = Resources.Load<Texture2D>("Sprites/PLATFORM");
 
-            CreatePlatformVisual("PlatformVisuals", new Vector3(9f, 1.1f, 5), 21f, 3f, platTex, new Color(0.3f, 0.35f, 0.3f));
+            CreatePlatformVisual("PlatformVisuals", new Vector3(9f, -1.0f, 5), 21f, 3f, platTex, new Color(0.3f, 0.35f, 0.3f));
             CreatePlatformVisual("LeftPlatformVisual", new Vector3(3f, 2.5f, 5), 5.2f, 2f, platTex, new Color(0.35f, 0.3f, 0.3f));
             CreatePlatformVisual("RightPlatformVisual", new Vector3(15f, 2.5f, 5), 5.2f, 2f, platTex, new Color(0.3f, 0.3f, 0.35f));
 
@@ -1253,16 +1253,17 @@ namespace LABANAN
 
         private void DrawPlatformCollision(int platX, int platWidth, int platY, Color fillColor)
         {
-            // platX, platWidth, platY are in fixed-point (÷1000 for world units)
             float x = FixedMath.ToFloat(platX);
             float w = FixedMath.ToFloat(platWidth);
             float y = FixedMath.ToFloat(platY);
-            // Draw as a thin horizontal line at the top surface + a faint filled rect below
-            Rect surface = new Rect(x, y - 0.1f, w, 0.1f);
-            DrawRectFilled(surface, fillColor);
-            // Also draw a wireframe outline of the full collision area
-            Rect full = new Rect(x, y - 1.0f, w, 1.0f);
-            DrawRectOutline(full, new Color(fillColor.r, fillColor.g, fillColor.b, 0.7f));
+
+            // Thick surface line at the exact collision surface
+            Rect surface = new Rect(x, y - 0.05f, w, 0.1f);
+            DrawRectFilled(surface, new Color(fillColor.r, fillColor.g, fillColor.b, 0.9f));
+
+            // Outline showing 1 unit below the surface (the "solid" area)
+            Rect solid = new Rect(x, y - 1.0f, w, 1.0f);
+            DrawRectOutline(solid, new Color(fillColor.r, fillColor.g, fillColor.b, 0.6f), 3f);
         }
 
         private void DrawPlayerHitbox(PlayerState player, Color color)
@@ -1295,7 +1296,7 @@ namespace LABANAN
             GUI.color = prevColor;
         }
 
-        private void DrawRectOutline(Rect worldRect, Color color)
+        private void DrawRectOutline(Rect worldRect, Color color, float thickness = 2f)
         {
             Vector3 bl = mainCam.WorldToScreenPoint(new Vector3(worldRect.x, worldRect.y, 0));
             Vector3 tr = mainCam.WorldToScreenPoint(new Vector3(worldRect.x + worldRect.width, worldRect.y + worldRect.height, 0));
@@ -1309,11 +1310,10 @@ namespace LABANAN
             if (debugTex == null) { debugTex = new Texture2D(1, 1); debugTex.SetPixel(0, 0, Color.white); debugTex.Apply(); }
             var prevColor = GUI.color;
             GUI.color = color;
-            float t = 2f; // outline thickness in pixels
-            GUI.DrawTexture(new Rect(x, yScreen, w, t), debugTex);       // top
-            GUI.DrawTexture(new Rect(x, yScreen + h - t, w, t), debugTex); // bottom
-            GUI.DrawTexture(new Rect(x, yScreen, t, h), debugTex);       // left
-            GUI.DrawTexture(new Rect(x + w - t, yScreen, t, h), debugTex); // right
+            GUI.DrawTexture(new Rect(x, yScreen, w, thickness), debugTex);           // top
+            GUI.DrawTexture(new Rect(x, yScreen + h - thickness, w, thickness), debugTex); // bottom
+            GUI.DrawTexture(new Rect(x, yScreen, thickness, h), debugTex);           // left
+            GUI.DrawTexture(new Rect(x + w - thickness, yScreen, thickness, h), debugTex); // right
             GUI.color = prevColor;
         }
 
