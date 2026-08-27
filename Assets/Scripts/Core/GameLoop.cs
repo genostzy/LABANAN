@@ -174,8 +174,8 @@ namespace LABANAN
             var platTex = Resources.Load<Texture2D>("Sprites/PLATFORM");
 
             CreatePlatformVisual("PlatformVisuals", new Vector3(9f, 1.1f, 5), 21f, 3f, platTex, new Color(0.3f, 0.35f, 0.3f));
-            CreatePlatformVisual("LeftPlatformVisual", new Vector3(3f, 3.9f, 5), 5.2f, 2f, platTex, new Color(0.35f, 0.3f, 0.3f));
-            CreatePlatformVisual("RightPlatformVisual", new Vector3(15f, 3.9f, 5), 5.2f, 2f, platTex, new Color(0.3f, 0.3f, 0.35f));
+            CreatePlatformVisual("LeftPlatformVisual", new Vector3(3f, 2.5f, 5), 5.2f, 2f, platTex, new Color(0.35f, 0.3f, 0.3f));
+            CreatePlatformVisual("RightPlatformVisual", new Vector3(15f, 2.5f, 5), 5.2f, 2f, platTex, new Color(0.3f, 0.3f, 0.35f));
 
             HidePlatformObject("MainPlatform");
             HidePlatformObject("LeftPlatform");
@@ -332,9 +332,9 @@ namespace LABANAN
             gameOverBlueWinsOverlay = CreateOverlaySpriteOn(gameOverCanvas.transform, "GameOverBlueWins", "Sprites/GameOver, again, exit (BLUE WINS)");
             gameOverDrawOverlay = CreateOverlaySpriteOn(gameOverCanvas.transform, "GameOverDraw", "Sprites/GameOver, again, exit (DRAW)");
 
-            // ── Game Over buttons (on top of overlays, on the GO canvas) ──
-            CreateGameOverButton("AgainBtn", new Vector2(0.35f, 0.22f), new Vector2(0.65f, 0.30f), font, OnAgainClicked);
-            CreateGameOverButton("ExitBtn", new Vector2(0.35f, 0.10f), new Vector2(0.65f, 0.18f), font, OnExitClicked);
+            // ── Game Over buttons (visible, on the GO canvas) ──
+            CreateGameOverButton("AgainBtn", new Vector2(0.35f, 0.22f), new Vector2(0.65f, 0.30f), "PLAY AGAIN", font, OnAgainClicked);
+            CreateGameOverButton("ExitBtn", new Vector2(0.35f, 0.10f), new Vector2(0.65f, 0.18f), "EXIT", font, OnExitClicked);
 
             gameOverCanvas.SetActive(false);
 
@@ -410,7 +410,7 @@ namespace LABANAN
             return img;
         }
 
-        private void CreateGameOverButton(string name, Vector2 anchorMin, Vector2 anchorMax, Font font, UnityEngine.Events.UnityAction onClick)
+        private void CreateGameOverButton(string name, Vector2 anchorMin, Vector2 anchorMax, string label, Font font, UnityEngine.Events.UnityAction onClick)
         {
             var obj = new GameObject(name);
             obj.transform.SetParent(gameOverCanvas.transform, false);
@@ -420,10 +420,20 @@ namespace LABANAN
             rt.offsetMin = Vector2.zero;
             rt.offsetMax = Vector2.zero;
             var img = obj.AddComponent<Image>();
-            img.color = new Color(1, 1, 1, 0.01f);
+            img.color = new Color(0.15f, 0.15f, 0.15f, 0.9f);
             var btn = obj.AddComponent<Button>();
             btn.targetGraphic = img;
             btn.onClick.AddListener(onClick);
+
+            var colors = btn.colors;
+            colors.normalColor = new Color(0.15f, 0.15f, 0.15f, 0.9f);
+            colors.highlightedColor = new Color(0.3f, 0.3f, 0.3f, 0.95f);
+            colors.pressedColor = new Color(0.1f, 0.1f, 0.1f, 0.9f);
+            btn.colors = colors;
+
+            CreateText(obj.transform, "Label", label, 24, TextAnchor.MiddleCenter,
+                Vector2.zero, Vector2.one, Color.white, font);
+
             obj.SetActive(false);
         }
 
