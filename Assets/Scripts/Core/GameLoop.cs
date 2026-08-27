@@ -173,9 +173,9 @@ namespace LABANAN
         {
             var platTex = Resources.Load<Texture2D>("Sprites/PLATFORM");
 
-            CreatePlatformVisual("PlatformVisuals", new Vector3(9f, 1f, 5), 26f, 3f, platTex, new Color(0.3f, 0.35f, 0.3f));
-            CreatePlatformVisual("LeftPlatformVisual", new Vector3(2.8f, 4f, 5), 8.6f, 2f, platTex, new Color(0.35f, 0.3f, 0.3f));
-            CreatePlatformVisual("RightPlatformVisual", new Vector3(14.8f, 4f, 5), 8.6f, 2f, platTex, new Color(0.3f, 0.3f, 0.35f));
+            CreatePlatformVisual("PlatformVisuals", new Vector3(9f, 1.1f, 5), 21f, 3f, platTex, new Color(0.3f, 0.35f, 0.3f));
+            CreatePlatformVisual("LeftPlatformVisual", new Vector3(3f, 3.9f, 5), 8.6f, 2f, platTex, new Color(0.35f, 0.3f, 0.3f));
+            CreatePlatformVisual("RightPlatformVisual", new Vector3(15f, 3.9f, 5), 8.6f, 2f, platTex, new Color(0.3f, 0.3f, 0.35f));
 
             HidePlatformObject("MainPlatform");
             HidePlatformObject("LeftPlatform");
