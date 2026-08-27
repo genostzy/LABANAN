@@ -17,39 +17,36 @@ namespace LABANAN
         [Header("Settings")]
         public int port = 7777;
         public int rollbackFrames = 2;
-        public int inputBufferFrames = 8;
 
         // Connection state
         public enum ConnectionState { Disconnected, Connecting, Connected }
         public ConnectionState State { get; private set; } = ConnectionState.Disconnected;
         public bool IsHost { get; private set; }
         public int PingMs { get; private set; }
-        public bool IsRollingBack { get; private set; }
-        public int RollbackFrames => rollbackFrames;
 
         // Events
         public event Action OnConnected;
         public event Action OnDisconnected;
-        public event Action<int> OnRollback;
 
         // Networking
         private UdpClient udpClient;
         private IPEndPoint remoteEndPoint;
         private Thread receiveThread;
-        private bool running;
+        private volatile bool running;
 
-        // Input sync
-        private InputData[] localInputBuffer = new InputData[256];
-        private InputData[] remoteInputBuffer = new InputData[256];
-        private bool[] remoteInputReceived = new bool[256];
+        // Input sync - ring buffers
+        private const int BUFFER_SIZE = 256;
+        private InputData[] localInputBuffer = new InputData[BUFFER_SIZE];
+        private InputData[] remoteInputBuffer = new InputData[BUFFER_SIZE];
+        private bool[] remoteInputReceived = new bool[BUFFER_SIZE];
         private int latestRemoteFrame = -1;
 
         public InputData[] LocalInputBuffer => localInputBuffer;
         public InputData[] RemoteInputBuffer => remoteInputBuffer;
 
         // Checksum sync
-        private uint[] localChecksumBuffer = new uint[256];
-        private bool[] localChecksumSet = new bool[256];
+        private uint[] localChecksumBuffer = new uint[BUFFER_SIZE];
+        private bool[] localChecksumSet = new bool[BUFFER_SIZE];
         private uint lastLocalChecksum;
         private uint lastRemoteChecksum;
         private int lastRemoteChecksumFrame = -1;
@@ -59,7 +56,11 @@ namespace LABANAN
 
         // Ping measurement
         private long lastPingSendTime;
-        private int pingInterval = 30; // frames
+        private int pingInterval = 60; // frames (~1 second)
+
+        // Disconnect detection
+        private long lastReceiveTimeMs;
+        private const int DISCONNECT_TIMEOUT_MS = 5000; // 5 seconds
 
         // Rollback
         private RollbackManager rollbackManager = new RollbackManager();
@@ -86,27 +87,24 @@ namespace LABANAN
             gameManager = gm;
         }
 
-        /// <summary>
-        /// Host a game (listen for connections).
-        /// </summary>
         public void Host()
         {
             IsHost = true;
             udpClient = new UdpClient(port);
+            udpClient.Client.ReceiveTimeout = 1000;
             remoteEndPoint = null;
             running = true;
+            lastReceiveTimeMs = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds();
             StartReceiveThread();
             State = ConnectionState.Connecting;
             Debug.Log($"Hosting on port {port}");
         }
 
-        /// <summary>
-        /// Join a game by connecting to host IP.
-        /// </summary>
         public void Join(string hostIp)
         {
             IsHost = false;
-            udpClient = new UdpClient(0); // Any available port
+            udpClient = new UdpClient(0);
+            udpClient.Client.ReceiveTimeout = 1000;
             IPAddress[] addresses = Dns.GetHostAddresses(hostIp);
             if (addresses.Length == 0)
             {
@@ -115,33 +113,40 @@ namespace LABANAN
             }
             remoteEndPoint = new IPEndPoint(addresses[0], port);
             running = true;
+            lastReceiveTimeMs = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds();
             StartReceiveThread();
 
-            // Send connection request
-            byte[] connectMsg = new byte[] { 0xFF }; // Magic connect byte
+            byte[] connectMsg = new byte[] { 0xFF };
             udpClient.Send(connectMsg, connectMsg.Length, remoteEndPoint);
 
             State = ConnectionState.Connecting;
             Debug.Log($"Connecting to {hostIp}:{port}");
         }
 
-        /// <summary>
-        /// Disconnect from the game.
-        /// </summary>
         public void Disconnect()
         {
+            if (State == ConnectionState.Disconnected) return;
+
             running = false;
             State = ConnectionState.Disconnected;
 
+            // Notify peer
+            if (udpClient != null && remoteEndPoint != null)
+            {
+                try { udpClient.Send(new byte[] { 0xFC }, 1, remoteEndPoint); }
+                catch { }
+            }
+
             if (receiveThread != null && receiveThread.IsAlive)
             {
-                receiveThread.Join(1000);
+                receiveThread.Join(500);
             }
 
             if (udpClient != null)
             {
                 try { udpClient.Close(); }
                 catch { }
+                udpClient = null;
             }
 
             rollbackManager.Clear();
@@ -158,82 +163,82 @@ namespace LABANAN
 
         private void ReceiveLoop()
         {
+            IPEndPoint senderEp = new IPEndPoint(IPAddress.Any, 0);
+
             while (running)
             {
                 try
                 {
-                    if (udpClient.Available > 0)
+                    byte[] data = udpClient.Receive(ref senderEp);
+                    lastReceiveTimeMs = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds();
+
+                    // Connection accepted (0xFF)
+                    if (data.Length == 1 && data[0] == 0xFF && State == ConnectionState.Connecting)
                     {
-                        IPEndPoint senderEp = new IPEndPoint(IPAddress.Any, 0);
-                        byte[] data = udpClient.Receive(ref senderEp);
+                        if (remoteEndPoint == null)
+                            remoteEndPoint = senderEp;
+                        State = ConnectionState.Connected;
+                        UnityMainThread.Enqueue(() => OnConnected?.Invoke());
+                        Debug.Log("Connected!");
+                        continue;
+                    }
 
-                        if (data.Length == 1 && data[0] == 0xFF && State == ConnectionState.Connecting)
+                    // Disconnect notification (0xFC)
+                    if (data.Length == 1 && data[0] == 0xFC)
+                    {
+                        Debug.Log("Peer disconnected");
+                        UnityMainThread.Enqueue(() => Disconnect());
+                        continue;
+                    }
+
+                    // Ping response (0xFE)
+                    if (data.Length == 1 && data[0] == 0xFE)
+                    {
+                        long now = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds();
+                        PingMs = (int)(now - lastPingSendTime);
+                        continue;
+                    }
+
+                    // Ping request (0xFD) - respond
+                    if (data.Length == 1 && data[0] == 0xFD)
+                    {
+                        udpClient.Send(new byte[] { 0xFE }, 1, senderEp);
+                        continue;
+                    }
+
+                    // Input packet: [frame(4), buttons(1), checksum(4)] = 9 bytes
+                    if (data.Length >= 5)
+                    {
+                        int frame = BitConverter.ToInt32(data, 0);
+                        byte buttons = data[4];
+
+                        remoteInputBuffer[frame % BUFFER_SIZE] = new InputData
                         {
-                            // Connection accepted
-                            if (remoteEndPoint == null)
-                                remoteEndPoint = senderEp;
-                            State = ConnectionState.Connected;
-                            UnityMainThread.Enqueue(() => OnConnected?.Invoke());
-                            Debug.Log("Connected!");
-                            continue;
-                        }
+                            frame = frame,
+                            buttons = buttons
+                        };
+                        remoteInputReceived[frame % BUFFER_SIZE] = true;
 
-                        if (data.Length == 1 && data[0] == 0xFE)
+                        if (frame > latestRemoteFrame)
+                            latestRemoteFrame = frame;
+
+                        if (data.Length >= 9)
                         {
-                            // Ping response
-                            long now = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds();
-                            PingMs = (int)(now - lastPingSendTime);
-                            continue;
-                        }
-
-                        if (data.Length == 8 && data[0] == 0xFD)
-                        {
-                            // Ping request - respond
-                            byte[] pong = new byte[] { 0xFE };
-                            udpClient.Send(pong, pong.Length, senderEp);
-                            continue;
-                        }
-
-                        // Input data: [frame(4 bytes), buttons(1 byte), checksum(4 bytes)]
-                        if (data.Length >= 5)
-                        {
-                            int frame = BitConverter.ToInt32(data, 0);
-                            byte buttons = data[4];
-
-                            remoteInputBuffer[frame % 256] = new InputData
+                            uint remoteChecksum = BitConverter.ToUInt32(data, 5);
+                            if (remoteChecksum != 0 && frame > lastRemoteChecksumFrame)
                             {
-                                frame = frame,
-                                buttons = buttons
-                            };
-                            remoteInputReceived[frame % 256] = true;
-
-                            if (frame > latestRemoteFrame)
-                                latestRemoteFrame = frame;
-
-                            if (data.Length >= 9)
-                            {
-                                // Only the packet for its own frame carries a real (non-zero)
-                                // checksum (see SendInputs) - redundant resends of older frames
-                                // carry zero and must not stomp a newer, already-recorded value.
-                                uint remoteChecksum = BitConverter.ToUInt32(data, 5);
-                                if (remoteChecksum != 0 && frame > lastRemoteChecksumFrame)
-                                {
-                                    lastRemoteChecksum = remoteChecksum;
-                                    lastRemoteChecksumFrame = frame;
-                                    if (localChecksumSet[frame % 256])
-                                        ChecksumMismatch = localChecksumBuffer[frame % 256] != remoteChecksum;
-                                }
+                                lastRemoteChecksum = remoteChecksum;
+                                lastRemoteChecksumFrame = frame;
+                                if (localChecksumSet[frame % BUFFER_SIZE])
+                                    ChecksumMismatch = localChecksumBuffer[frame % BUFFER_SIZE] != remoteChecksum;
                             }
                         }
-                    }
-                    else
-                    {
-                        Thread.Sleep(1); // Avoid busy waiting
                     }
                 }
                 catch (SocketException)
                 {
-                    if (running) Debug.Log("Socket error - connection lost");
+                    // ReceiveTimeout fires as SocketException — just loop
+                    if (!running) break;
                 }
                 catch (ObjectDisposedException)
                 {
@@ -244,33 +249,38 @@ namespace LABANAN
 
         private void Update()
         {
-            if (State != ConnectionState.Connected) return;
+            if (State == ConnectionState.Disconnected) return;
+
+            // Disconnect detection: no data for 5 seconds
+            if (State == ConnectionState.Connected && remoteEndPoint != null)
+            {
+                long elapsed = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds() - lastReceiveTimeMs;
+                if (elapsed > DISCONNECT_TIMEOUT_MS)
+                {
+                    Debug.LogWarning($"No data received for {elapsed}ms — disconnecting");
+                    Disconnect();
+                    return;
+                }
+            }
 
             // Send ping periodically
-            if (Time.frameCount % pingInterval == 0 && remoteEndPoint != null)
+            if (State == ConnectionState.Connected && Time.frameCount % pingInterval == 0 && remoteEndPoint != null)
             {
                 lastPingSendTime = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds();
-                byte[] ping = new byte[] { 0xFD };
-                try { udpClient.Send(ping, ping.Length, remoteEndPoint); }
+                try { udpClient.Send(new byte[] { 0xFD }, 1, remoteEndPoint); }
                 catch { }
             }
         }
 
-        /// <summary>
-        /// Record local input for the current frame.
-        /// </summary>
         public void RecordLocalInput(int frame, InputData input)
         {
-            localInputBuffer[frame % 256] = input;
+            localInputBuffer[frame % BUFFER_SIZE] = input;
         }
 
-        /// <summary>
-        /// Record this peer's checksum for a specific simulated frame, for desync detection.
-        /// </summary>
         public void RecordLocalChecksum(int frame, uint checksum)
         {
-            localChecksumBuffer[frame % 256] = checksum;
-            localChecksumSet[frame % 256] = true;
+            localChecksumBuffer[frame % BUFFER_SIZE] = checksum;
+            localChecksumSet[frame % BUFFER_SIZE] = true;
             lastLocalChecksum = checksum;
 
             if (frame == lastRemoteChecksumFrame)
@@ -278,49 +288,53 @@ namespace LABANAN
         }
 
         /// <summary>
-        /// Send all un-acknowledged inputs to peer.
+        /// Send inputs to peer. Sends current frame + redundancy every 4 frames.
         /// </summary>
         public void SendInputs(int currentFrame)
         {
             if (remoteEndPoint == null || udpClient == null) return;
 
-            // Send last N frames of input for reliability
-            int startFrame = Math.Max(0, currentFrame - inputBufferFrames);
+            // Always send current frame
+            SendSingleInput(currentFrame);
 
-            for (int f = startFrame; f <= currentFrame; f++)
+            // Every 4 frames, also send the last 3 for redundancy (handles packet loss)
+            if (currentFrame % 4 == 0)
             {
-                InputData input = localInputBuffer[f % 256];
-                byte[] data = new byte[9];
-                Buffer.BlockCopy(BitConverter.GetBytes(input.frame), 0, data, 0, 4);
-                data[4] = input.buttons;
-
-                // Only the current frame's packet carries a real checksum - older frames in
-                // this resend batch already had their own checksum tagged when they were current,
-                // so re-stamping them here would misrepresent which frame the checksum is for.
-                if (f == currentFrame && localChecksumSet[f % 256])
-                    Buffer.BlockCopy(BitConverter.GetBytes(localChecksumBuffer[f % 256]), 0, data, 5, 4);
-
-                try { udpClient.Send(data, data.Length, remoteEndPoint); }
-                catch { }
+                for (int f = currentFrame - 3; f < currentFrame; f++)
+                {
+                    if (f >= 0)
+                        SendSingleInput(f);
+                }
             }
         }
 
-        /// <summary>
-        /// Get the remote player's input for a specific frame.
-        /// Returns true if input is available (received or predicted).
-        /// </summary>
+        private void SendSingleInput(int frame)
+        {
+            InputData input = localInputBuffer[frame % BUFFER_SIZE];
+            byte[] data = new byte[9];
+            Buffer.BlockCopy(BitConverter.GetBytes(input.frame), 0, data, 0, 4);
+            data[4] = input.buttons;
+
+            // Only attach checksum if we have one for this frame
+            if (localChecksumSet[frame % BUFFER_SIZE])
+                Buffer.BlockCopy(BitConverter.GetBytes(localChecksumBuffer[frame % BUFFER_SIZE]), 0, data, 5, 4);
+
+            try { udpClient.Send(data, data.Length, remoteEndPoint); }
+            catch { }
+        }
+
         public bool GetRemoteInput(int frame, out InputData input)
         {
-            if (remoteInputReceived[frame % 256])
+            if (remoteInputReceived[frame % BUFFER_SIZE])
             {
-                input = remoteInputBuffer[frame % 256];
+                input = remoteInputBuffer[frame % BUFFER_SIZE];
                 return true;
             }
 
             // Predict using last known input
             if (latestRemoteFrame >= 0)
             {
-                input = remoteInputBuffer[latestRemoteFrame % 256];
+                input = remoteInputBuffer[latestRemoteFrame % BUFFER_SIZE];
                 return true;
             }
 
@@ -328,47 +342,31 @@ namespace LABANAN
             return false;
         }
 
-        /// <summary>
-        /// Check if we should rollback (remote input arrived that differs from prediction).
-        /// Returns the earliest frame that needs re-simulation.
-        /// </summary>
         public int CheckForRollback(int currentFrame)
         {
-            // Check if any recent remote inputs arrived that differ from what we predicted
             for (int f = currentFrame - rollbackFrames; f <= currentFrame; f++)
             {
-                if (f >= 0 && remoteInputReceived[f % 256])
+                if (f >= 0 && remoteInputReceived[f % BUFFER_SIZE])
                 {
-                    // Input arrived - need to check if it matches prediction
-                    // This will be handled by GameManager comparing with rollback state
                     return f;
                 }
             }
             return -1;
         }
 
-        /// <summary>
-        /// Save game state for potential rollback.
-        /// </summary>
         public void SaveGameState(int frame, GameState state)
         {
             rollbackManager.SaveState(frame, state);
         }
 
-        /// <summary>
-        /// Load a previous game state for rollback.
-        /// </summary>
         public bool TryLoadGameState(int frame, out GameState state)
         {
             return rollbackManager.TryLoadState(frame, out state);
         }
 
-        /// <summary>
-        /// Notify listeners that a rollback occurred.
-        /// </summary>
         public void NotifyRollback(int frames)
         {
-            OnRollback?.Invoke(frames);
+            Debug.Log($"Rollback: {frames} frames");
         }
 
         private void OnDestroy()
@@ -382,9 +380,6 @@ namespace LABANAN
         }
     }
 
-    /// <summary>
-    /// Helper to enqueue actions to the main thread from background threads.
-    /// </summary>
     public static class UnityMainThread
     {
         private static readonly System.Collections.Generic.Queue<Action> queue =
