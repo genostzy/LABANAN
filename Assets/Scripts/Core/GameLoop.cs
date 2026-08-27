@@ -651,20 +651,30 @@ namespace LABANAN
             hostPage = CreatePage(connectionUIRoot.transform, "HostPage");
             AddMenuBackground(hostPage.transform);
 
-            CreateText(hostPage.transform, "HostTitle", "HOSTING", 32, TextAnchor.MiddleCenter,
-                new Vector2(0.2f, 0.62f), new Vector2(0.8f, 0.70f), new Color(1f, 0.4f, 0.4f), font);
+            CreateText(hostPage.transform, "HostTitle", "HOST GAME", 36, TextAnchor.MiddleCenter,
+                new Vector2(0.15f, 0.70f), new Vector2(0.85f, 0.78f), new Color(1f, 0.4f, 0.4f), font);
 
-            CreateText(hostPage.transform, "HostIPLabel", "Share this IP with your opponent:", 20, TextAnchor.MiddleCenter,
-                new Vector2(0.2f, 0.50f), new Vector2(0.8f, 0.55f), new Color(0.7f, 0.7f, 0.7f), font);
+            CreateText(hostPage.transform, "HostIPLabel", "Your IP (share with opponent):", 20, TextAnchor.MiddleCenter,
+                new Vector2(0.15f, 0.58f), new Vector2(0.85f, 0.63f), new Color(0.7f, 0.7f, 0.7f), font);
 
-            hostIPDisplay = CreateText(hostPage.transform, "HostIPValue", "", 36, TextAnchor.MiddleCenter,
-                new Vector2(0.15f, 0.40f), new Vector2(0.85f, 0.48f), new Color(0.4f, 1f, 0.4f), font);
+            hostIPDisplay = CreateText(hostPage.transform, "HostIPValue", GetLocalIPAddress(), 32, TextAnchor.MiddleCenter,
+                new Vector2(0.15f, 0.50f), new Vector2(0.85f, 0.57f), new Color(0.4f, 1f, 0.4f), font);
 
-            statusLabel = CreateText(hostPage.transform, "HostStatus", "Waiting for opponent...", 20, TextAnchor.MiddleCenter,
-                new Vector2(0.2f, 0.32f), new Vector2(0.8f, 0.37f), Color.yellow, font);
+            statusLabel = CreateText(hostPage.transform, "HostStatus", "Press START to begin hosting", 20, TextAnchor.MiddleCenter,
+                new Vector2(0.15f, 0.42f), new Vector2(0.85f, 0.47f), Color.yellow, font);
+
+            CreateButton(hostPage.transform, "HostStartBtn", "START", 28,
+                new Vector2(0.30f, 0.30f), new Vector2(0.70f, 0.37f), font, () =>
+                {
+                    if (NetworkManager.Instance != null)
+                    {
+                        NetworkManager.Instance.Host();
+                        if (statusLabel != null) statusLabel.text = "Waiting for opponent...";
+                    }
+                });
 
             CreateButton(hostPage.transform, "HostBackBtn", "BACK", 24,
-                new Vector2(0.35f, 0.15f), new Vector2(0.65f, 0.22f), font, () =>
+                new Vector2(0.35f, 0.18f), new Vector2(0.65f, 0.25f), font, () =>
                 {
                     if (NetworkManager.Instance != null) NetworkManager.Instance.Disconnect();
                     ShowPage(mainMenuPage);
@@ -674,17 +684,17 @@ namespace LABANAN
             joinPage = CreatePage(connectionUIRoot.transform, "JoinPage");
             AddMenuBackground(joinPage.transform);
 
-            CreateText(joinPage.transform, "JoinTitle", "JOIN GAME", 32, TextAnchor.MiddleCenter,
-                new Vector2(0.2f, 0.62f), new Vector2(0.8f, 0.70f), new Color(0.4f, 0.6f, 1f), font);
+            CreateText(joinPage.transform, "JoinTitle", "JOIN GAME", 36, TextAnchor.MiddleCenter,
+                new Vector2(0.15f, 0.70f), new Vector2(0.85f, 0.78f), new Color(0.4f, 0.6f, 1f), font);
 
-            CreateText(joinPage.transform, "JoinIPLabel", "Enter host IP:", 20, TextAnchor.MiddleRight,
-                new Vector2(0.25f, 0.48f), new Vector2(0.45f, 0.53f), Color.white, font);
+            CreateText(joinPage.transform, "JoinIPLabel", "Enter host IP:", 22, TextAnchor.MiddleCenter,
+                new Vector2(0.15f, 0.58f), new Vector2(0.85f, 0.63f), Color.white, font);
 
             joinIPField = CreateInputField(joinPage.transform, "JoinIPField", ipInput,
-                new Vector2(0.46f, 0.48f), new Vector2(0.70f, 0.53f), font);
+                new Vector2(0.25f, 0.49f), new Vector2(0.75f, 0.55f), font);
 
             CreateButton(joinPage.transform, "JoinConnectBtn", "CONNECT", 28,
-                new Vector2(0.30f, 0.35f), new Vector2(0.70f, 0.42f), font, () =>
+                new Vector2(0.30f, 0.36f), new Vector2(0.70f, 0.43f), font, () =>
                 {
                     if (NetworkManager.Instance != null && !string.IsNullOrEmpty(ipInput))
                     {
@@ -695,10 +705,10 @@ namespace LABANAN
                 });
 
             CreateText(joinPage.transform, "JoinStatus", "", 20, TextAnchor.MiddleCenter,
-                new Vector2(0.2f, 0.28f), new Vector2(0.8f, 0.33f), Color.yellow, font);
+                new Vector2(0.15f, 0.28f), new Vector2(0.85f, 0.33f), Color.yellow, font);
 
             CreateButton(joinPage.transform, "JoinBackBtn", "BACK", 24,
-                new Vector2(0.35f, 0.15f), new Vector2(0.65f, 0.22f), font, () => ShowPage(mainMenuPage));
+                new Vector2(0.35f, 0.18f), new Vector2(0.65f, 0.25f), font, () => ShowPage(mainMenuPage));
 
             // ── Start on main menu ──
             ShowPage(mainMenuPage);
@@ -811,8 +821,7 @@ namespace LABANAN
             {
                 string localIP = GetLocalIPAddress();
                 if (hostIPDisplay != null) hostIPDisplay.text = localIP;
-                if (statusLabel != null) statusLabel.text = "Waiting for opponent...";
-                if (NetworkManager.Instance != null) NetworkManager.Instance.Host();
+                if (statusLabel != null) statusLabel.text = "Press START to begin hosting";
             }
 
             if (page == joinPage)
@@ -1198,35 +1207,30 @@ namespace LABANAN
 
             if (player1Sprite != null)
             {
-                float midX = (FixedMath.ToFloat(state.player1.x) + FixedMath.ToFloat(state.player2.x)) * 0.5f;
-                float midY = (FixedMath.ToFloat(state.player1.y) + FixedMath.ToFloat(state.player2.y)) * 0.5f;
-                float playerY = midY;
-                float baseCamY = 1.5f;
-                float camY = baseCamY + playerY * 0.3f;
-                float baseOrtho = 3.5f;
-                float orthoSize = baseOrtho + Mathf.Abs(playerY - baseCamY) * 0.5f;
-                float distBetween = Mathf.Abs(FixedMath.ToFloat(state.player1.x) - FixedMath.ToFloat(state.player2.x));
-                float minOrtho = Mathf.Max(3.5f, distBetween * 0.12f + 2f);
-                orthoSize = Mathf.Clamp(orthoSize, minOrtho, 8f);
+                float p1x = FixedMath.ToFloat(state.player1.x);
+                float p2x = FixedMath.ToFloat(state.player2.x);
+                float midX = (p1x + p2x) * 0.5f;
+                float distBetween = Mathf.Abs(p1x - p2x);
 
-                float camX = midX;
+                // Tekken-style: fixed Y, camera only pans horizontally and zooms
+                float camY = 3.5f;
+                float orthoSize = 5f;
 
                 if (state.roundStartTimer > 0)
                 {
-                    float midXstart = midX;
-                    float midYstart = midY + 0.5f;
-                    camX = Mathf.Lerp(mainCam.transform.position.x, midXstart, 0.08f);
-                    camY = Mathf.Lerp(mainCam.transform.position.y, midYstart, 0.08f);
-                    orthoSize = Mathf.Lerp(mainCam.orthographicSize, 2.2f, 0.08f);
+                    // Pre-round: zoom in on center
+                    orthoSize = Mathf.Lerp(mainCam.orthographicSize, 3f, 0.08f);
+                    midX = Mathf.Lerp(mainCam.transform.position.x, midX, 0.08f);
                 }
                 else
                 {
-                    camX = Mathf.Lerp(mainCam.transform.position.x, midX, 0.15f);
-                    camY = Mathf.Lerp(mainCam.transform.position.y, camY, 0.15f);
-                    orthoSize = Mathf.Lerp(mainCam.orthographicSize, orthoSize, 0.15f);
+                    // Dynamic zoom based on distance between players
+                    float targetOrtho = Mathf.Clamp(distBetween * 0.18f + 3f, 4f, 9f);
+                    orthoSize = Mathf.Lerp(mainCam.orthographicSize, targetOrtho, 0.1f);
+                    midX = Mathf.Lerp(mainCam.transform.position.x, midX, 0.12f);
                 }
 
-                mainCam.transform.position = new Vector3(camX, camY, -10f);
+                mainCam.transform.position = new Vector3(midX, camY, -10f);
                 mainCam.orthographicSize = orthoSize;
             }
 
